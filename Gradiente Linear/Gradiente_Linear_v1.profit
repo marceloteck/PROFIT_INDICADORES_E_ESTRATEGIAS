@@ -1,0 +1,47 @@
+INPUT
+ Distancia(2); 
+ Max_contratos(10);
+ Inicio_Compras(5692);
+
+VAR
+Origem_    : float;
+Contador_  : Inteiro;
+Posicao_   : float;
+
+
+
+INICIO
+  // ## GATILHO DE ENTRADA
+  Origem_ := Inicio_Compras + Distancia;
+  
+ // inicio das compras
+  se (BuyPosition <= Max_contratos) então
+  inicio
+    FOR Contador_ := (BuyPosition +1) TO Max_contratos Do
+      inicio
+      Posicao_ := Origem_ - (Contador_ * Distancia);
+      se (close >  Posicao_) então BuyLimit(Posicao_, 1);
+      fim;
+  
+  fim;
+
+  // saidas das compras - stops
+  FOR Contador_ := 0 to (BuyPosition - 1) Do
+  inicio
+    Posicao_  :=Origem_  - (Contador_ * Distancia);
+
+    se (close < Posicao_) então SellToCoverLimit(Posicao_, 1);
+  fim;
+
+
+
+
+
+
+
+
+
+
+
+
+FIM;
