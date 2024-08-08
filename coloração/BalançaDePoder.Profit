@@ -1,0 +1,35 @@
+// Definir variáveis e parâmetros
+input 
+  PeriodoBOP(16);
+  TipoMediaBOP(0); // 0 - Aritmética, 1 - Exponencial, 2 - Welles Wilder, 3 - Ponderada
+  PeriodoMediaExp(17); // Período da média exponencial
+
+var
+  BOPValor: float;
+  MediaExponencialBOP: float;
+
+Inicio
+  // Calcular Balança do Poder
+  BOPValor := BalanceOfPower(PeriodoBOP, TipoMediaBOP);
+
+
+
+  // Calcular Média Exponencial da Balança do Poder
+  MediaExponencialBOP := MediaExp(PeriodoMediaExp, BOPValor);
+
+  // Condições de Coloração com Balança do Poder e Média Exponencial
+  Se (MediaExponencialBOP > 0) e (BOPValor > 0) então
+      inicio
+        PaintBar(clGreen); // Balança do Poder acima de 0 e Média Exponencial acima de 0 - Tendência de alta
+      fim
+
+  senão se (MediaExponencialBOP < 0) e (BOPValor < 0) então
+  inicio
+      PaintBar(clRed); // Balança do Poder abaixo de 0 e Média Exponencial abaixo de 0 - Tendência de baixa
+   fim
+  senão
+    PaintBar(clwhite);
+
+    plot(MediaMovel);
+
+fim 

@@ -33,15 +33,4 @@ INICIO
     se (close < Posicao_) então SellToCoverLimit(Posicao_, 1);
   fim;
 
-
-
-
-
-
-
-
-
-
-
-
 FIM;
