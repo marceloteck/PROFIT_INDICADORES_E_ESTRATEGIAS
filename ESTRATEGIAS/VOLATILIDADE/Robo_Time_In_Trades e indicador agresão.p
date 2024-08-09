@@ -1,5 +1,5 @@
 INPUT
-  TempoGrafico(5);
+  TempoGrafico(1);
 
 VAR
   Dif, PMB, PMS, PrC, PrV : Float;
@@ -37,13 +37,8 @@ BEGIN
      fim;
   fim;
 
- se HasPosition e StopC ou  HasPosition e  StopV então ClosePosition;
+ //se HasPosition e StopC ou  HasPosition e  StopV então ClosePosition;
 
- se (IsBought) e (SinalV) então ReversePosition;
- se (IsSold) e (SinalC) então ReversePosition;
-
-  
-  
-  
-
+ se (IsBought) e (SinalV) então Inicio ReversePosition; SellToCoverStop(BuyPrice+2000); fim;
+ se (IsSold) e (SinalC) então Inicio ReversePosition; BuyToCoverStop(SellPrice+2000); fim;
 END;
