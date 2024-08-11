@@ -1,13 +1,21 @@
+{ OPERAVEL NO TEMPO GRAFICO DE 1 MINUTO MINI iNDICE OU MINI DOLAR }
+
 INPUT
    AlvoFixo(False);
+   TamanhoDoAlvoPts(0);
+   TamanhoDoStopPts(0); 
    PermitirGradienteLinear(True);
    LimiteDeContratos(10);
    EntradaMinimaContratos(2);
 
+   HoraInicio(900);
+   HoraFim(1700);
+   HoraFechamento(1740);
+
 VAR
    // 1 Minuto //
    Media34p, Media12p,
-   PowerVolume_1m, WeisWave_1m, Bop_1m, SaldoAgress_1m, MediaAgress_1m, Rsi_1m : Float;
+   PowerVolume_1m, WeisWave_1m, Bop_1m, Rsi_1m : Float;
 
    // 2 Minutos //
    Media89p_2m,
@@ -42,22 +50,60 @@ VAR
    QuantContratos : Inteiro;
    
    // INDICADORES GERAIS // 
-   VwapD, AjustD : Float;
+   VwapD, AjustD,
+   AVB  : Float;
+
+   // indicador AVB
+   MediaAVB, MediaMovelAVB: float;
+    AgressaoCompra, AgressaoVenda : Boolean;
 
 BEGIN
-   //########## CHAMADA DOS INDICADORES ##########// 
+   //########## CHAMADA DOS INDICADORES ##########//
    
+   // ########################### 1 MINUTO // 
+   Media12p := Media(12, close);
+   Media34p := media(34, close);
+   WeisWave_1m := NelogicaWeisWave(3);
+   Bop_1m := BalanceOfPower(14, 0);
+   Rsi_1m := RSI(14, 0);
    
-   
-   
-   
+   // AVB - SALDO DE AGRESSÃO
+   AVB := AgressionVolBalance;
+   MediaAVB := MediaExp(7, avb); 
+   MediaMovelAVB := Media(7, MediaAVB);
+   //condição avb
+   AgressaoCompra := (MediaAVB > MediaMovelAVB);  // AGRESSÃO COMPRADORA
+   AgressaoVenda  := (MediaAVB < MediaMovelAVB);  // AGRESSÃO VENDEDORA
+
+
+
+   // ########################### 2 MINUTOS // 
+   Media89p_2m :=  Media(178, close);
+
+
+
+
+
+      // 2 Minutos //
+  // Media89p_2m,
+//   PowerVolume_2m, WeisWave_2m, Bop_2m, SaldoAgress_2m, MediaAgress_2m, Rsi_2m : Float;
+
+
+
+
+
+
    
   //########## REGRAS DE ENTRADAS E SAIDAS ##########//    
+    COMPRAR := false;
+    COMPRAR_PARC := false;
 
-  //EntradaMinimaContratos
+    VENDER := false;
+    VENDER_PARC := False;
+
 
   //########## CONTROLE DE OPERAÇÕES ##########//
-  Se not HasPosition então
+  Se not HasPosition e (Time >= HoraInicio) e (Time < HoraFim) então
      Inicio
          Se COMPRAR então BuyAtMarket(LimiteDeContratos);
          Se COMPRAR_PARC então BuyAtMarket(QuantContratos);
@@ -74,6 +120,12 @@ BEGIN
                Se Pacial_25PcntC então SellToCoverAtMarket(Round(BuyPosition*0.25));
                Se Pacial_50PcntC então SellToCoverAtMarket(Round(BuyPosition*0.50));
                Se Pacial_75PcntC então SellToCoverAtMarket(Round(BuyPosition*0.75));
+
+               Se AlvoFixo então
+                  Inicio
+                     SellToCoverLimit(BuyPrice+TamanhoDoAlvoPts);
+                     SellToCoverStop(BuyPrice-TamanhoDoStopPts, BuyPrice-TamanhoDoStopPts-3);
+                  fim;
             fim;
             
          Se IsSold então
@@ -82,7 +134,14 @@ BEGIN
                Se Pacial_25PcntV então BuyToCoverAtMarket(Round(SellPosition*0.25));
                Se Pacial_50PcntV então BuyToCoverAtMarket(Round(SellPosition*0.50));
                Se Pacial_75PcntV então BuyToCoverAtMarket(Round(SellPosition*0.75));
+
+                Se AlvoFixo então
+                  Inicio
+                     BuyToCoverLimit(SellPrice-TamanhoDoAlvoPts);
+                     BuyToCoverStop(SellPrice+TamanhoDoStopPts, SellPrice+TamanhoDoStopPts+3);
+                  fim;
             fim;
+         Se (Time > HoraFechamento) então ClosePosition;
      fim;
 
 END; 
