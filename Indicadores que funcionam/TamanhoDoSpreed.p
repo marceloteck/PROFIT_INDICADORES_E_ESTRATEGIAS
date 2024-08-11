@@ -1,15 +1,15 @@
 input
   Periodo(1);
 var
- Candle: float; 
+ Candle_2m: float; 
 
 inicio
- Candle := (close - open) + (close[1] - open[1]) * Periodo;
+ Candle_2m := (close - open) + (close[1] - open[1]) * Periodo;
                    
 
-  plot(Candle);
+  plot(Candle_2m);
 
-  se (Candle > 0) entao SetPlotColor(1, clGreen) senão
-  se (Candle < 0) entao SetPlotColor(1, 255);
+  se (Candle_2m > 0) entao SetPlotColor(1, clGreen) senão
+  se (Candle_2m < 0) entao SetPlotColor(1, 255);
 
 fim;
