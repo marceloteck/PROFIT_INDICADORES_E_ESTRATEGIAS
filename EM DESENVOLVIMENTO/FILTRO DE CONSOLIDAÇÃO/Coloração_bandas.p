@@ -27,17 +27,3 @@ BEGIN
 
 
 END;
-
-{
-INPUT
-
-
-VAR
-
-
-BEGIN
-
-
-
-END;
-}

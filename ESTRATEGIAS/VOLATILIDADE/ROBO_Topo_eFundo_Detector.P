@@ -1,0 +1,59 @@
+INPUT
+   Rompimento(True);
+   SuporteReistencia(False);
+
+   Periodo(20);
+   Deslocamento(0);
+
+VAR
+   A, B, mMin, mMax : Float;
+   Topo, Fundo, MediaL : Float;
+   Return, validade : Inteiro;
+
+BEGIN
+/////////////////////// INDICADOR /////////////////////////
+   A := Highest(HIGH, periodo)[Deslocamento];
+   B := Lowest(low, periodo)[Deslocamento];
+
+   Se (Minima > Minima[1]) e (Minima[1] <= Minima[2]) então // (Maxima > Maxima[1]) então
+       mMin := Minima[1];
+
+       Se (B >= mMin) então
+           Fundo := mMIn;
+
+   Se (Maxima < Maxima[1]) e (Maxima[1] >= Maxima[2]) então
+       mMax := Maxima[1];
+
+       Se (A <= mMax) então
+           Topo := mMax;
+
+    plot(Topo);                  
+    SetPlotColor(1, clgreen);
+
+    plot2(Fundo);
+    SetPlotColor(2, clMaroon);
+
+
+
+/////////////////////// ROBO /////////////////////////
+
+  Se (Rompimento) e (SuporteReistencia = false) então
+      Inicio
+          Se (HIGH < Topo) então BuyStop(Topo, Topo+30);
+          Se (LOW > Fundo) então SellShortStop(Fundo, Fundo-30);
+      fim;
+
+
+  Se (Rompimento = false) e (SuporteReistencia) então
+      Inicio
+          Se (HIGH < Topo) então SellShortLimit(Topo);
+          Se (LOW > Fundo) então BuyLimit(Fundo);
+      fim;
+
+      {
+        ROBO DEVE SER UZADO AS ORDENS OCO DA PLATAFORMA PRA FAZER AS SAIDAS,
+        NÃO CODIFICADO A SAIDA.
+      }
+
+
+END;

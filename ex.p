@@ -1,0 +1,11 @@
+INPUT
+
+
+VAR
+
+
+BEGIN
+
+
+
+END;
