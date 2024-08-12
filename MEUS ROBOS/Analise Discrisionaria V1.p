@@ -1,6 +1,14 @@
 { OPERAVEL NO TEMPO GRAFICO DE 1 MINUTO MINI iNDICE OU MINI DOLAR }
 
 INPUT
+   Preco_POC(0.00); 
+   Preco_MaiorVolumeDiarioAnt(0.00);
+   AltoVolumeN1(0.00);
+   AltoVolumeN2(0.00);
+   AltoVolumeN3(0.00);
+   AltoVolumeN4(0.00);
+   AltoVolumeN5(0.00);
+          
    AlvoFixo(False);
    TamanhoDoAlvoPts(0);
    TamanhoDoStopPts(0); 
@@ -14,19 +22,38 @@ INPUT
 
 VAR
    // 1 Minuto //
-   Media34p, Media12p,
-   PowerVolume_1m, WeisWave_1m, Bop_1m, Rsi_1m : Float;
+   Media34p, Media12p : Float;
+
+   PowerVolumePlus_1m, PowerVolumeLow_1m, Exaustao_Vol_1m, 
+   WeisWaveC_1m, WeisWaveV_1m,
+   BopC_1m, BopV_1m,
+   RsiC_1m, RsiV_1m, Rsi70_1m, Rsi30_1m : Boolean;
+
+    // indicador AVB
+   AgressaoCompra_1m, AgressaoVenda_1m :  Boolean;
 
    // 2 Minutos //
-   Media89p_2m,
-   PowerVolume_2m, WeisWave_2m, Bop_2m, SaldoAgress_2m, MediaAgress_2m, Rsi_2m : Float;
+   Media89p_2m: Float;
+
+   PowerVolumePlus_2m, PowerVolumeLow_2m, Exaustao_Vol_2m,
+   WeisWaveC_2m, WeisWaveV_2m,
+   BopC_2m, BopV_2m,
+   RsiC_2m, RsiV_2m, Rsi70_2m, Rsi30_2m : Boolean;
+
+   // indicador AVB
+   AgressaoCompra_2m, AgressaoVenda_2m :  Boolean;
 
    // 5 Minutos //
    Media20p_5m, Media200p_5m,
-   WeisWave_5m, Rsi_5m, PowerVolume_5m : Float;
+   Rsi_5m : Float;
+
+   WeisWaveC_5m, WeisWaveV_5m,
+   Exaustao_Vol_5m, PowerVolumePlus_5m, PowerVolumeLow_5m,
+   RsiC_5m, RsiV_5m, Rsi70_5m, Rsi30_5m : Boolean;
 
    // 15 Minutos //
-   VwapBands_15m : float;
+   VwapBands_15m, PontoDeControlePOC, MaiorVolumeD,
+   VolumeAltoN1_15m, VolumeAltoN2_15m, VolumeAltoN3_15m, VolumeAltoN4_15m, VolumeAltoN5_15m : float;
 
    // 60 Minutos //
    MediaExp8p_60m, Media200p_60m : Float;
@@ -35,7 +62,7 @@ VAR
 
    // ANALISE DE MERCADO //
    RegiaoCompra, RegiaoVenda, Desalavancagem, Realavancagem, COMPRAR, VENDER, COMPRAR_PARC, VENDER_PARC, StopC, StopV,
-   Absorsao, Exaustao, RegiaoLiquidez, CONSOLIDACAO, ondaElliot : Boolean;
+   Absorsao, Exaustao_Vol, RegiaoLiquidez, CONSOLIDACAO, ondaElliot : Boolean;
 
    // ENTRADAS E SAIDAS VALIDAS //
    EtrdC1, EtrdC2, EtrdC3, EtrdC4, EtrdC5, EtrdC6, EtrdC7, EtrdC8, EtrdC9, EtrdC10,
@@ -50,56 +77,237 @@ VAR
    QuantContratos : Inteiro;
    
    // INDICADORES GERAIS // 
-   VwapD, AjustD,
-   AVB  : Float;
+   VwapD, AjustD : Float;
 
-   // indicador AVB
-   MediaAVB, MediaMovelAVB: float;
-    AgressaoCompra, AgressaoVenda : Boolean;
+
+   /////// ######################### FUNÇÕES ///////////////////////////////
+
+    funcao AVB_Agress(Periodo : Inteiro; TipoValue : Inteiro) : Boolean;  // ## FUNÇÃO AGRESSÃO COMPRADORA E VENDEDORA
+        Var
+          AVB,
+          MediaAVB,                   
+          MediaMovelAVB : float;       
+          {
+            0 -> Agressão compradora
+            1 -> Agressão vendedora
+            #Periodo
+            1m -> 7p
+            2m -> 14p
+            5m -> 35p
+          }
+          
+        Inicio
+               AVB := AgressionVolBalance;
+               MediaAVB := MediaExp(Periodo, avb); 
+               MediaMovelAVB := Media(Periodo, MediaAVB);
+               //condição avb
+               Se TipoValue = 0 então Result := (MediaAVB > MediaMovelAVB);   // AGRESSÃO COMPRADORA
+               Se TipoValue = 1 então Result := (MediaAVB < MediaMovelAVB);   // AGRESSÃO VENDEDORA            
+        fim;
+
+    Funcao MediaMovelClose(Periodo : Inteiro):float;
+        Inicio
+           Result:= Media(Periodo, close);  // MEDIA MOVEL PELO FECHAMENTO
+        fim;
+
+    Funcao AnaliseVolume(PeriodoAnl : Inteiro; TipoVol : Inteiro): Boolean;  // Analisar Volume Financeiro
+        {
+          1 Minuto -> MediaExp : 7p       
+          2 Minutos-> MediaExp : 14p
+        }
+        Var
+           VolumeAtual, MediaMovelVol, MediaMovelM : Float;
+           PivoBaixo, PivoAlto, PullbackAltoVolume : Boolean; 
+        Inicio
+            VolumeAtual := Volume;
+            MediaMovelVol := mediaExp(PeriodoAnl, VolumeAtual);
+            MediaMovelM := mediaExp(PeriodoAnl, MediaMovelVol);
+            
+            PivoBaixo := (Low < Low[8]) and (Low < Low[5]);
+            PivoAlto := (High > High[8]) and (High > High[5]);
+            PullbackAltoVolume := ((PivoBaixo or PivoAlto) and (VolumeAtual > 10000));
+          
+            se TipoVol = 0 então Result := not PullbackAltoVolume;               // EXAUSTÃO DO VOLUME
+            se TipoVol = 1 então Result :=  (MediaMovelVol > MediaMovelM);       // VOLUME ALTO 
+            se TipoVol = 2 então Result := (MediaMovelVol < MediaMovelM);        // VOLUME BAIXO  
+        Fim;
+
+    Funcao WeiWaveN(Periodo:Inteiro; TipoW:inteiro):Boolean;         // Indicador Weis Wave
+    {
+      1 Minuto -> 2 periodos
+      2 Minutos -> 4 Periodos     
+    }
+        Var
+           WeisWavep : Float;
+        Inicio
+           WeisWavep := NelogicaWeisWave(Periodo);
+
+           Se TipoW = 0 então Result := WeisWavep > 0; // WEIS WAVE COMPRADOR
+           Se TipoW = 1 então Result := WeisWavep < 0; // WEIS WAVE VENDEDOR
+        fim;
+
+    Funcao BopPower(Periodo:Inteiro; TipoB:inteiro):Boolean;         // Indicador Balança do Poder
+    {
+      1 Minuto -> 14 periodos     
+    }
+        Var
+           IndicadorBop : Float;
+        Inicio
+           IndicadorBop := BalanceOfPower(Periodo, 0);
+
+           Se TipoB = 0 então Result := IndicadorBop > 0; // BOP COMPRADOR
+           Se TipoB = 1 então Result := IndicadorBop < 0; // BOP VENDEDOR
+        fim;
+
+    Funcao RsiValorIFR(Periodo:Inteiro; TipoR:inteiro):Boolean;         // Indicador RSI ou IFR
+    {
+      1 Minuto -> 14 periodos
+      2 Minutos -> 28 periodos     
+    }
+        Var
+           IndicadorRsi : Float;
+        Inicio
+           IndicadorRsi := RSI(Periodo, 0);
+
+              // RSI VALORES
+             Se TipoR = 51 então Result := IndicadorRsi > 50;    // RSI COMPRADOR      > 50
+             Se TipoR = 49 então Result := IndicadorRsi < 50;    // RSI VENDEDOR       < 50
+             Se TipoR = 71 então Result := IndicadorRsi > 70;    // RSI SOBRE-COMPRADO > 70
+             Se TipoR = 29 então Result := IndicadorRsi < 30;    // RSI SOBRE-VENDIDO  < 30 
+        fim;
+
+        {
+          # LISTA DAS FUNÇÕES
+            AVB_Agress       -> Agressão compradora e vendedora no momento
+            MediaMovelClose  -> Media movel pelo fechamento
+            AnaliseVolume    -> Analise de volume financeiro, ALTO, BAIXO, EXAUSTÃO
+            WeiWaveN         -> Indicador WEIS WAVE
+            BopPower         -> Indicador Balança do poder
+            RsiValorIFR      -> Indicador RSI
+        }
+
 
 BEGIN
    //########## CHAMADA DOS INDICADORES ##########//
-   
-   // ########################### 1 MINUTO // 
-   Media12p := Media(12, close);
-   Media34p := media(34, close);
-   WeisWave_1m := NelogicaWeisWave(3);
-   Bop_1m := BalanceOfPower(14, 0);
-   Rsi_1m := RSI(14, 0);
-   
-   // AVB - SALDO DE AGRESSÃO
-   AVB := AgressionVolBalance;
-   MediaAVB := MediaExp(7, avb); 
-   MediaMovelAVB := Media(7, MediaAVB);
-   //condição avb
-   AgressaoCompra := (MediaAVB > MediaMovelAVB);  // AGRESSÃO COMPRADORA
-   AgressaoVenda  := (MediaAVB < MediaMovelAVB);  // AGRESSÃO VENDEDORA
-
-
-
-   // ########################### 2 MINUTOS // 
-   Media89p_2m :=  Media(178, close);
-
-
-
-
-
-      // 2 Minutos //
-  // Media89p_2m,
-//   PowerVolume_2m, WeisWave_2m, Bop_2m, SaldoAgress_2m, MediaAgress_2m, Rsi_2m : Float;
-
-
-
-
-
+   VwapD := VWAP(1);
+   AjustD := PriorCote(4);
 
    
-  //########## REGRAS DE ENTRADAS E SAIDAS ##########//    
-    COMPRAR := false;
-    COMPRAR_PARC := false;
+   // ############################################################### 1 MINUTO // 
+   Media12p := MediaMovelClose(12);  // Mm 12 periodo 1 Minuto
+   Media34p := MediaMovelClose(34);  // Mm 34 periodo 1 Minuto
 
-    VENDER := false;
+   // WEIS WAVE
+   WeisWaveC_1m := WeiWaveN(2, 0); // WEIS WAVE COMPRADOR 1 Minuto
+   WeisWaveV_1m := WeiWaveN(2, 1); // WEIS WAVE VENDEDOR 1 Minuto
+
+   // Balança do poder
+   BopC_1m := BopPower(14, 0);  // BOP COMPRADOR 1 Minuto
+   BopV_1m := BopPower(14, 1);  // BOP VENDEDOR 1 Minuto
+
+   // RSI VALORES
+   RsiC_1m := RsiValorIFR(14, 51);    // RSI COMPRADOR      > 50
+   RsiV_1m := RsiValorIFR(14, 49);    // RSI VENDEDOR       < 50
+   Rsi70_1m:= RsiValorIFR(14, 71);    // RSI SOBRE-COMPRADO > 70
+   Rsi30_1m:= RsiValorIFR(14, 29);    // RSI SOBRE-VENDIDO  < 30
+   
+   // AVB - SALDO DE AGRESSÃO    
+   AgressaoCompra_1m := AVB_Agress(7, 0);  // AGRESSÃO COMPRADORA 1 Minuto
+   AgressaoVenda_1m  := AVB_Agress(7, 1);  // AGRESSÃO VENDEDORA  1 Minuto
+
+   // MEDIA VOLUME
+   Exaustao_Vol_1m    := AnaliseVolume(7, 0);   // EXAUSTÃO DO VOLUME 1 Minuto
+   PowerVolumePlus_1m := AnaliseVolume(7, 1);   // VOLUME ALTO 1 Minuto
+   PowerVolumeLow_1m  := AnaliseVolume(7, 2);   // VOLUME BAIXO 1 Minuto
+
+
+   // ################################################################################ 2 MINUTOS // 
+   Media89p_2m :=  MediaMovelClose(178);
+
+   // WEIS WAVE
+   WeisWaveC_2m := WeiWaveN(4, 0); // WEIS WAVE COMPRADOR 2 Minutos
+   WeisWaveV_2m := WeiWaveN(4, 1); // WEIS WAVE VENDEDOR 2 Minutos 
+
+   // Balança do poder
+   BopC_2m := BopPower(28, 0);  // BOP COMPRADOR 1 Minuto
+   BopV_2m := BopPower(28, 1);  // BOP VENDEDOR 1 Minuto
+
+   // RSI VALORES
+   RsiC_2m := RsiValorIFR(28, 51);    // RSI COMPRADOR      > 50
+   RsiV_2m := RsiValorIFR(28, 49);    // RSI VENDEDOR       < 50
+   Rsi70_2m:= RsiValorIFR(28, 71);    // RSI SOBRE-COMPRADO > 70
+   Rsi30_2m:= RsiValorIFR(28, 29);    // RSI SOBRE-VENDIDO  < 30
+
+    // AVB - SALDO DE AGRESSÃO    
+   AgressaoCompra_2m := AVB_Agress(14, 0);  // AGRESSÃO COMPRADORA 2 Minuto
+   AgressaoVenda_2m  := AVB_Agress(14, 1);  // AGRESSÃO VENDEDORA  2 Minuto
+
+   // MEDIA VOLUME
+   Exaustao_Vol_2m    := AnaliseVolume(14, 0);   // EXAUSTÃO DO VOLUME 2 Minuto
+   PowerVolumePlus_2m := AnaliseVolume(14, 1);   // VOLUME ALTO 2 Minuto
+   PowerVolumeLow_2m  := AnaliseVolume(14, 2);   // VOLUME BAIXO 2 Minuto
+
+
+   // ################################################################################ 5 MINUTOS // 
+
+   Media20p_5m := MediaMovelClose(90);
+   Media200p_5m:= MediaMovelClose(1000);
+
+   // RSI VALORES
+   RsiC_5m := RsiValorIFR(70, 51);    // RSI COMPRADOR      > 50
+   RsiV_5m := RsiValorIFR(70, 49);    // RSI VENDEDOR       < 50
+   Rsi70_5m:= RsiValorIFR(70, 71);    // RSI SOBRE-COMPRADO > 70
+   Rsi30_5m:= RsiValorIFR(70, 29);    // RSI SOBRE-VENDIDO  < 30
+
+   // WEIS WAVE
+   WeisWaveC_5m := WeiWaveN(10, 0); // WEIS WAVE COMPRADOR 5 Minutos
+   WeisWaveV_5m := WeiWaveN(10, 1); // WEIS WAVE VENDEDOR 5 Minutos 
+
+    // MEDIA VOLUME
+   Exaustao_Vol_5m    := AnaliseVolume(35, 0);   // EXAUSTÃO DO VOLUME 5 Minuto
+   PowerVolumePlus_5m := AnaliseVolume(35, 1);   // VOLUME ALTO 5 Minuto
+   PowerVolumeLow_5m  := AnaliseVolume(35, 2);   // VOLUME BAIXO 5 Minuto
+
+
+   // ################################################################################ 15 MINUTOS //  PENDENTE
+   // POC E MAIOR VOLUME VOLUME
+   PontoDeControlePOC := Preco_POC;
+   MaiorVolumeD       := Preco_MaiorVolumeDiarioAnt;
+
+   // REGIÃO DE ALTO VOLUME SEM CONTAR COM OS DOIS ANTERIORES 
+   VolumeAltoN1_15m   := AltoVolumeN1;
+   VolumeAltoN2_15m   := AltoVolumeN2;
+   VolumeAltoN3_15m   := AltoVolumeN3;
+   VolumeAltoN4_15m   := AltoVolumeN4;
+   VolumeAltoN5_15m   := AltoVolumeN5;
+
+   // ################################################################################ 60 MINUTOS //   PENDENTE
+  //MediaExp8p_60m := MediaExp(960, close);
+
+   
+  //########## REGRAS DE ENTRADAS E SAIDAS ##########//
+
+
+
+
+  
+    // CONFIRMAÇÃO DE ENTRADA ##    
+    COMPRAR      := False;
+    COMPRAR_PARC := False;
+
+    VENDER      := False;
     VENDER_PARC := False;
+
+    // CONFIRMAÇÃO DE SAIDA ##
+    StopC          := False;
+    Pacial_25PcntC := False;
+    Pacial_50PcntC := False;
+    Pacial_75PcntC := False;
+
+    StopV          := False;
+    Pacial_25PcntV := False;
+    Pacial_50PcntV := False;
+    Pacial_75PcntV := False;
 
 
   //########## CONTROLE DE OPERAÇÕES ##########//
