@@ -27,7 +27,7 @@ VAR
    PowerVolumePlus_1m, PowerVolumeLow_1m, Exaustao_Vol_1m, 
    WeisWaveC_1m, WeisWaveV_1m,
    BopC_1m, BopV_1m,
-   RsiC_1m, RsiV_1m, Rsi70_1m, Rsi30_1m : Boolean;
+   RsiC_1m, RsiV_1m, Rsi70_1m, Rsi30_1m: Boolean;
 
     // indicador AVB
    AgressaoCompra_1m, AgressaoVenda_1m :  Boolean;
@@ -62,7 +62,8 @@ VAR
 
    // ANALISE DE MERCADO //
    RegiaoCompra, RegiaoVenda, Desalavancagem, Realavancagem, COMPRAR, VENDER, COMPRAR_PARC, VENDER_PARC, StopC, StopV,
-   Absorsao, Exaustao_Vol, RegiaoLiquidez, CONSOLIDACAO, ondaElliot : Boolean;
+   Absorsao, Exaustao_Vol, RegiaoLiquidez, CONSOLIDACAO, ondaElliot,
+   TendenciaDeAlta, TendenciaDeBaixa, PERM  : Boolean;
 
    // ENTRADAS E SAIDAS VALIDAS //
    EtrdC1, EtrdC2, EtrdC3, EtrdC4, EtrdC5, EtrdC6, EtrdC7, EtrdC8, EtrdC9, EtrdC10,
@@ -284,10 +285,17 @@ BEGIN
    // ################################################################################ 60 MINUTOS //   PENDENTE
   //MediaExp8p_60m := MediaExp(960, close);
 
-   
+    //TendenciaDeAlta, TendenciaDeBaixa, PERM
   //########## REGRAS DE ENTRADAS E SAIDAS ##########//
 
+  TendenciaDeAlta  := (Media12p > Media34p) e (Media34p >  Media20p_5m) e (Media20p_5m > Media89p_2m);
+  TendenciaDeBaixa := (Media12p < Media34p) e (Media34p <  Media20p_5m) e (Media20p_5m < Media89p_2m);
 
+
+
+  // operações
+  { PERM }
+  PERM := TendenciaDeAlta e BopV_1m e AgressaoVenda_1m e WeisWaveV_1m;
 
 
   
