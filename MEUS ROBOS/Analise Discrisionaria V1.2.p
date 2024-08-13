@@ -274,13 +274,17 @@ BEGIN
 
 
   Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m e not HasPosition então
-    Se (Open[1] > Media34p) e (close[1] < Media34p) e (close[1] < open[1]) então
+    Se (Open[1] > Media34p) e (close[1] < Media34p) então
        Se (Maxima > Minima[1]) então
          Inicio
-             VENDER_PARC := True;
-             QuantContratos := Round(LimiteDeContratos / 2);
-             PrcEntrada := Minima[1];
+             //VENDER_PARC := True;
+             //QuantContratos := Round(LimiteDeContratos / 2);
+             //PrcEntrada := Minima[1];
              PERM := True;
+
+             SellShortLimit(Minima[1], Round(LimiteDeContratos / 2));
+
+
          Fim;
 
 
@@ -290,9 +294,11 @@ BEGIN
          inicio
             StopV := True;
             PERM  := false;
-            VENDER_PARC := false;           
-            QuantContratos := 0;
-            PrcEntrada := 0;   
+           // VENDER_PARC := false;           
+           // QuantContratos := 0;
+           // PrcEntrada := 0;  
+            
+            //BuyToCoverAtMarket; 
          fim;
 
  
