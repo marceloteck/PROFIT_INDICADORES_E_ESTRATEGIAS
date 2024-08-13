@@ -1,4 +1,14 @@
+{ OPERAVEL NO TEMPO GRAFICO DE 1 MINUTO MINI iNDICE OU MINI DOLAR }
+
 INPUT
+   Preco_POC(0.00); 
+   Preco_MaiorVolumeDiarioAnt(0.00);
+   AltoVolumeN1(0.00);
+   AltoVolumeN2(0.00);
+   AltoVolumeN3(0.00);
+   AltoVolumeN4(0.00);
+   AltoVolumeN5(0.00);
+          
    AlvoFixo(False);
    TamanhoDoAlvoPts(0);
    TamanhoDoStopPts(0); 
@@ -9,6 +19,7 @@ INPUT
    HoraInicio(900);
    HoraFim(1700);
    HoraFechamento(1740);
+
 VAR
    // 1 Minuto //
    Media34p, Media12p : Float;
@@ -36,26 +47,43 @@ VAR
    Media20p_5m, Media200p_5m,
    Rsi_5m : Float;
 
+   WeisWaveC_5m, WeisWaveV_5m,
+   Exaustao_Vol_5m, PowerVolumePlus_5m, PowerVolumeLow_5m,
+   RsiC_5m, RsiV_5m, Rsi70_5m, Rsi30_5m : Boolean;
 
-   // NOVAS VARIAVEIS
+   // 15 Minutos //
+   VwapBands_15m, PontoDeControlePOC, MaiorVolumeD,
+   VolumeAltoN1_15m, VolumeAltoN2_15m, VolumeAltoN3_15m, VolumeAltoN4_15m, VolumeAltoN5_15m : float;
+
+   // 60 Minutos //
+   MediaExp8p_60m, Media200p_60m : Float;
+   SobreCompraBB_60m, SobreVendaBB_60m : Float; //Bandas de Bolliger 8p Exponencial 2.40 de desvio|fora das bandas marca true|
 
 
    // ANALISE DE MERCADO //
    RegiaoCompra, RegiaoVenda, Desalavancagem, Realavancagem, COMPRAR, VENDER, COMPRAR_PARC, VENDER_PARC, StopC, StopV,
    Absorsao, Exaustao_Vol, RegiaoLiquidez, CONSOLIDACAO, ondaElliot,
-   TendenciaDeAlta, TendenciaDeBaixa, PERM  : Boolean;
+   TendenciaDeAlta, TendenciaDeBaixa, PERM_UP, PERM_DOWN  : Boolean;
+
+   // ENTRADAS E SAIDAS VALIDAS //
+   EtrdC1, EtrdC2, EtrdC3, EtrdC4, EtrdC5, EtrdC6, EtrdC7, EtrdC8, EtrdC9, EtrdC10,
+   EtrdV1, EtrdV2, EtrdV3, EtrdV4, EtrdV5, EtrdV6, EtrdV7, EtrdV8, EtrdV9, EtrdV10 : Boolean;
+   
+   StopC1, StopC2, StopC3, StopC4, StopC5, StopC6, StopC7, StopC8, StopC9, StopC10,
+   StopV1, StopV2, StopV3, StopV4, StopV5, StopV6, StopV7, StopV8, StopV9, StopV10 : Boolean;
 
    Pacial_25PcntC, Pacial_50PcntC, Pacial_75PcntC,
    Pacial_25PcntV, Pacial_50PcntV, Pacial_75PcntV : Boolean;
 
    QuantContratos : Inteiro;
-   PrcEntrada : Float;
    
    // INDICADORES GERAIS // 
    VwapD, AjustD : Float;
 
 
-   funcao AVB_Agress(Periodo : Inteiro; TipoValue : Inteiro) : Boolean;  // ## FUNÇÃO AGRESSÃO COMPRADORA E VENDEDORA
+   /////// ######################### FUNÇÕES ///////////////////////////////
+
+    funcao AVB_Agress(Periodo : Inteiro; TipoValue : Inteiro) : Boolean;  // ## FUNÇÃO AGRESSÃO COMPRADORA E VENDEDORA
         Var
           AVB,
           MediaAVB,                   
@@ -161,17 +189,12 @@ VAR
 
 
 BEGIN
-   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // CHAMADA DOS INDICADORES
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-
+   //########## CHAMADA DOS INDICADORES ##########//
    VwapD := VWAP(1);
    AjustD := PriorCote(4);
 
    
-  //----------------------------------------------------------------------------
-  // 1 MINUTO 
-  //----------------------------------------------------------------------------
+   // ############################################################### 1 MINUTO // 
    Media12p := MediaMovelClose(12);  // Mm 12 periodo 1 Minuto
    Media34p := MediaMovelClose(34);  // Mm 34 periodo 1 Minuto
 
@@ -196,121 +219,83 @@ BEGIN
    // MEDIA VOLUME
    Exaustao_Vol_1m    := AnaliseVolume(7, 0);   // EXAUSTÃO DO VOLUME 1 Minuto
    PowerVolumePlus_1m := AnaliseVolume(7, 1);   // VOLUME ALTO 1 Minuto
-   PowerVolumeLow_1m  := AnaliseVolume(7, 2);   // VOLUME BAIXO 1 Minuto 
+   PowerVolumeLow_1m  := AnaliseVolume(7, 2);   // VOLUME BAIXO 1 Minuto
 
 
-  //----------------------------------------------------------------------------
-  // 2 MINUTOS 
-  //----------------------------------------------------------------------------
+   // ################################################################################ 2 MINUTOS // 
    Media89p_2m :=  MediaMovelClose(178);
 
+   // WEIS WAVE
+   WeisWaveC_2m := WeiWaveN(4, 0); // WEIS WAVE COMPRADOR 2 Minutos
+   WeisWaveV_2m := WeiWaveN(4, 1); // WEIS WAVE VENDEDOR 2 Minutos 
 
-  //----------------------------------------------------------------------------
-  // 5 MINUTOS 
-  //----------------------------------------------------------------------------
+   // Balança do poder
+   BopC_2m := BopPower(28, 0);  // BOP COMPRADOR 1 Minuto
+   BopV_2m := BopPower(28, 1);  // BOP VENDEDOR 1 Minuto
+
+   // RSI VALORES
+   RsiC_2m := RsiValorIFR(28, 51);    // RSI COMPRADOR      > 50
+   RsiV_2m := RsiValorIFR(28, 49);    // RSI VENDEDOR       < 50
+   Rsi70_2m:= RsiValorIFR(28, 71);    // RSI SOBRE-COMPRADO > 70
+   Rsi30_2m:= RsiValorIFR(28, 29);    // RSI SOBRE-VENDIDO  < 30
+
+    // AVB - SALDO DE AGRESSÃO    
+   AgressaoCompra_2m := AVB_Agress(14, 0);  // AGRESSÃO COMPRADORA 2 Minuto
+   AgressaoVenda_2m  := AVB_Agress(14, 1);  // AGRESSÃO VENDEDORA  2 Minuto
+
+   // MEDIA VOLUME
+   Exaustao_Vol_2m    := AnaliseVolume(14, 0);   // EXAUSTÃO DO VOLUME 2 Minuto
+   PowerVolumePlus_2m := AnaliseVolume(14, 1);   // VOLUME ALTO 2 Minuto
+   PowerVolumeLow_2m  := AnaliseVolume(14, 2);   // VOLUME BAIXO 2 Minuto
+
+
+   // ################################################################################ 5 MINUTOS // 
 
    Media20p_5m := MediaMovelClose(90);
-   
+   Media200p_5m:= MediaMovelClose(1000);
+
+   // RSI VALORES
+   RsiC_5m := RsiValorIFR(70, 51);    // RSI COMPRADOR      > 50
+   RsiV_5m := RsiValorIFR(70, 49);    // RSI VENDEDOR       < 50
+   Rsi70_5m:= RsiValorIFR(70, 71);    // RSI SOBRE-COMPRADO > 70
+   Rsi30_5m:= RsiValorIFR(70, 29);    // RSI SOBRE-VENDIDO  < 30
+
+   // WEIS WAVE
+   WeisWaveC_5m := WeiWaveN(10, 0); // WEIS WAVE COMPRADOR 5 Minutos
+   WeisWaveV_5m := WeiWaveN(10, 1); // WEIS WAVE VENDEDOR 5 Minutos 
+
+    // MEDIA VOLUME
+   Exaustao_Vol_5m    := AnaliseVolume(35, 0);   // EXAUSTÃO DO VOLUME 5 Minuto
+   PowerVolumePlus_5m := AnaliseVolume(35, 1);   // VOLUME ALTO 5 Minuto
+   PowerVolumeLow_5m  := AnaliseVolume(35, 2);   // VOLUME BAIXO 5 Minuto
 
 
+   // ################################################################################ 15 MINUTOS //  PENDENTE
+   // POC E MAIOR VOLUME VOLUME
+   PontoDeControlePOC := Preco_POC;
+   MaiorVolumeD       := Preco_MaiorVolumeDiarioAnt;
 
+   // REGIÃO DE ALTO VOLUME SEM CONTAR COM OS DOIS ANTERIORES 
+   VolumeAltoN1_15m   := AltoVolumeN1;
+   VolumeAltoN2_15m   := AltoVolumeN2;
+   VolumeAltoN3_15m   := AltoVolumeN3;
+   VolumeAltoN4_15m   := AltoVolumeN4;
+   VolumeAltoN5_15m   := AltoVolumeN5;
 
-   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+   // ################################################################################ 60 MINUTOS //   PENDENTE
+  //MediaExp8p_60m := MediaExp(960, close);
 
-  //                                     REGRAS DE ENTRADAS E SAIDAS
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-
-  {     validação do PERM   - OPERAÇÃO FEITA CONTRA A TENDENCIA
-
-   | tendencia de alta |  [] Parâmetros operacionais:
-
-      - CLOSE > M20p
-      - CLOSE > M34p
-
-      [] Analise feita nos graficos de 1 e 2 minutos
-          - Analise de divervencias: RSI, BOP, SALDO DE AGRESSÃO, VOLUME
-
-
-      - A media de 34p deve está acompanhando os preços
-      - Deve ser observadas nas tentativas de renovação, Absorção
-      - Deve ter um desequilibrio nas agressões do TIMES IN TRADES contra o movimento principal
-      - A linha de tendencia deve ser rompida
-
-      - Acontece então um rompimento da media de 34 periodo e um retorno, fazendo um puback com teste e confirmação
-      - Inverão de fluxo no BOP
-      - Principal agressão é vendedora
-
-      - A entrada acontece com o aumento do fluxo no times in trade
-
-
-      | [] Parâmetros gerenciais:
-
-      - Stop atras do utimo topo de referencia
-      - alvo, qualquer media que esteja mais proxima dos preços
-          : -> media de 20 periodos, de 200 periodos, Vwap ou trade location
-
-       /* FAZER PARCIAL COM 100 PTS NESTA OPERAÇÃO E A SAIDA TOTAL NA MEDIA DE 20P OU AS DEFINIDAS ANTERIOMENTE.
-        DEPOIS DOS 100 PTS deve ter um traling stop no ponto de entrada + 1 tick. */
-
-
-        PROTEÇÃO
-
-        - Caso a operação não flua, deve ativar o gradiente linear (se close > 34p) levando o ponto de entrada pra cima.
-          e deve sair da operação definitiva com 2 tick do no positivo.
-
-
-
-  }
-                                          
-
-   //----------------------------------------------------------------------------
-   // PERM -  OPERAÇÃO DE INVERSÃO DE FLUXO COM PADRÃO DE EXECUÇÃO DE RETORNO A MÉDIA
-
-
+    //TendenciaDeAlta, TendenciaDeBaixa, PERM
+  //########## REGRAS DE ENTRADAS E SAIDAS ##########//
 
   TendenciaDeAlta  := (Media12p > Media34p) e (Media34p >  Media20p_5m) e (Media20p_5m > Media89p_2m);
   TendenciaDeBaixa := (Media12p < Media34p) e (Media34p <  Media20p_5m) e (Media20p_5m < Media89p_2m);
 
 
-  Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m e not HasPosition então
-    Se (Open[1] > Media34p) e (close[1] < Media34p) então
-       Se (Maxima > Minima[1]) então
-         Inicio
-             //VENDER_PARC := True;
-             //QuantContratos := Round(LimiteDeContratos / 2);
-             //PrcEntrada := Minima[1];
-             PERM := True;
 
-             SellShortLimit(Minima[1], Round(LimiteDeContratos / 2));
-
-
-         Fim;
-
-
-   Se IsSold então
-     Se PERM então
-       Se (close < Media20p_5m) então 
-         inicio
-            StopV := True;
-            PERM  := false;
-           // VENDER_PARC := false;           
-           // QuantContratos := 0;
-           // PrcEntrada := 0;  
-            
-            //BuyToCoverAtMarket; 
-         fim;
-
- 
-
-
-  //PERM := TendenciaDeAlta e BopV_1m e AgressaoVenda_1m e WeisWaveV_1m;
-
-   //LimiteDeContratos  PrcEntrada
-
-
-
-
+  // operações
+  { PERM }
+  PERM_UP := TendenciaDeAlta e BopV_1m e AgressaoVenda_1m e WeisWaveV_1m;
 
 
   
@@ -319,7 +304,7 @@ BEGIN
     COMPRAR_PARC := False;
 
     VENDER      := False;
-
+    VENDER_PARC := False;
 
     // CONFIRMAÇÃO DE SAIDA ##
     StopC          := False;
@@ -327,6 +312,7 @@ BEGIN
     Pacial_50PcntC := False;
     Pacial_75PcntC := False;
 
+    StopV          := False;
     Pacial_25PcntV := False;
     Pacial_50PcntV := False;
     Pacial_75PcntV := False;
@@ -339,7 +325,7 @@ BEGIN
          Se COMPRAR_PARC então BuyAtMarket(QuantContratos);
 
          Se VENDER então SellShortAtMarket(LimiteDeContratos);
-         Se VENDER_PARC então SellShortLimit(PrcEntrada, QuantContratos);
+         Se VENDER_PARC então SellShortAtMarket(QuantContratos);
      fim;
 
   Se HasPosition então
@@ -360,7 +346,7 @@ BEGIN
             
          Se IsSold então
             Inicio
-               Se StopV então BuyToCoverAtMarket;
+               Se StopV então ClosePosition;
                Se Pacial_25PcntV então BuyToCoverAtMarket(Round(SellPosition*0.25));
                Se Pacial_50PcntV então BuyToCoverAtMarket(Round(SellPosition*0.50));
                Se Pacial_75PcntV então BuyToCoverAtMarket(Round(SellPosition*0.75));
@@ -374,6 +360,4 @@ BEGIN
          Se (Time > HoraFechamento) então ClosePosition;
      fim;
 
-
-END;
-
+END; 
