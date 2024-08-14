@@ -62,7 +62,10 @@ VAR
    DifM34_20, DifM20_89, DifM12_34, DifCloseVwap, 
    PERM_TOP: Boolean;
 
-     A, B, mMin, mMax, Topo, Fundo: Float;
+   A, B, mMin, mMax, Topo, Fundo: Float;
+
+   ValidatPERM1, ValidatPERM2, ValidatPERM3, ValidatPERM4, ValidatPERM5,
+   TCG : Boolean; 
 
 
   // NOVAS VARIAVEIS  ^            #############
@@ -170,10 +173,6 @@ VAR
             BopPower         -> Indicador Balança do poder
             RsiValorIFR      -> Indicador RSI
         }
-
-
-          
-
 
 BEGIN
    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -300,41 +299,51 @@ BEGIN
   //----------------------------------------------------------------------------
   // PERM -  OPERAÇÃO DE INVERSÃO DE FLUXO COM PADRÃO DE EXECUÇÃO DE RETORNO A MÉDIA
 
-
+  // ValidatPERM1, ValidatPERM2, ValidatPERM3, ValidatPERM4, ValidatPERM5 : Boolean;
 
    // plot(Topo);                  
    // plot2(Fundo);
 
 
-    DifM12_34 := (Media12p-Media34p) >= 100; 
-    DifM34_20 := (Media34p-Media20p_5m) >= 100;
-    DifM20_89 := (Media20p_5m-Media89p_2m) >= 100;
+    DifM12_34 := (Media12p-Media34p) >= 100; // indice : 100 
+    DifM34_20 := (Media34p-Media20p_5m) >= 100; // indice : 100 
+    DifM20_89 := (Media20p_5m-Media89p_2m) >= 100; // indice : 100 
   
-    DifCloseVwap := (Close-VwapD) >= 70;
+    DifCloseVwap := (Close-VwapD) >= 70; // indice 70
   
     TendenciaDeAlta  := (Media34p >  Media20p_5m) e (Media20p_5m > Media89p_2m);
     TendenciaDeBaixa :=  (Media34p <  Media20p_5m) e (Media20p_5m < Media89p_2m);
+
+    TCG := 
+    (OPEN[2] > Media34p[2]) e (CLOSE[2] < Media34p[2]) e
+    (CLOSE[1] > CLOSE[2]) E (CLOSE < OPEN[1]) e (close < Media34p); 
+
+    // ---------- VALIDAÇÃO PERM
+    ValidatPERM1 := TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m;
+    ValidatPERM2 := (close < Media34p) e (Open > Media34p); 
+    ValidatPERM3 := DifM34_20 e DifM20_89 e DifM12_34[10]; //
+
   
   
-     Se Not HasPosition então
-      Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m então
-        Se (close < Media34p) e (Open > Media34p) então
-          Se DifM34_20 e DifM20_89 e DifM12_34[10] então
-            Inicio
-               Se (close <= Fundo) então
-                 Inicio
-                    PERM_TOP := true;
-                    PaintBar(clPurple);
-                 fim
-                 senão
-                 Inicio
-                   SellShortLimit(Minima, Round(LimiteDeContratos / 2));
-                 fim;
-               
-               PERM := True;
-               Pacial_50PcntV := false;
-               PaintBar(255);
-            Fim;
+      Se Not HasPosition e ValidatPERM1  e ValidatPERM3 e TCG então
+        Inicio
+           Se (close <= Fundo) então
+             Inicio
+                PERM_TOP := true;
+                PaintBar(clPurple);
+             fim
+             senão
+             Inicio
+               //SellShortLimit(Minima, Round(LimiteDeContratos / 2));
+               SellShortAtMarket;
+             fim;
+           
+           PERM := True;
+           Pacial_50PcntV := false;
+           PaintBar(255);
+        Fim;
+
+
 
    Se not DifCloseVwap então
      Inicio
