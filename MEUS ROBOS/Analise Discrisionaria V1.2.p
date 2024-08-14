@@ -9,6 +9,10 @@ INPUT
    HoraInicio(900);
    HoraFim(1700);
    HoraFechamento(1740);
+
+   periodoTopDown(10);
+   DeslocamentoTopDown(0);
+
 VAR
    // 1 Minuto //
    Media34p, Media12p : Float;
@@ -55,11 +59,13 @@ VAR
 
    // NOVAS VARIAVEIS              #############
 
-         DifM34_20, DifM20_89, DifM12_34, DifCloseVwap : Boolean;
+   DifM34_20, DifM20_89, DifM12_34, DifCloseVwap, 
+   PERM_TOP: Boolean;
+
+     A, B, mMin, mMax, Topo, Fundo: Float;
 
 
-
-
+  // NOVAS VARIAVEIS  ^            #############
 
    funcao AVB_Agress(Periodo : Inteiro; TipoValue : Inteiro) : Boolean;  // ## FUNÇÃO AGRESSÃO COMPRADORA E VENDEDORA
         Var
@@ -222,6 +228,23 @@ BEGIN
    
 
 
+  //----------------------------------------------------------------------------
+  // Indicador de topos e fundos 
+  //----------------------------------------------------------------------------
+   A := Highest(HIGH, periodoTopDown)[DeslocamentoTopDown];
+   B := Lowest(low, periodoTopDown)[DeslocamentoTopDown];
+
+   Se (Minima > Minima[1]) e (Minima[1] <= Minima[2]) então // (Maxima > Maxima[1]) então
+       mMin := Minima[1];
+
+       Se (B >= mMin) então
+           Fundo := mMIn;
+
+   Se (Maxima < Maxima[1]) e (Maxima[1] >= Maxima[2]) então
+       mMax := Maxima[1];
+
+       Se (A <= mMax) então
+           Topo := mMax;
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,163 +295,108 @@ BEGIN
 
   }
                                           
-
-   //----------------------------------------------------------------------------
-   // PERM -  OPERAÇÃO DE INVERSÃO DE FLUXO COM PADRÃO DE EXECUÇÃO DE RETORNO A MÉDIA
-
-  DifM12_34 := (Media12p-Media34p) >= 30; 
-  DifM34_20 := (Media34p-Media20p_5m) >= 100;
-  DifM20_89 := (Media20p_5m-Media89p_2m) >= 100;
-
-  DifCloseVwap := (Close-VwapD) >= 70;
-
-  TendenciaDeAlta  := (Media34p >  Media20p_5m) e (Media20p_5m > Media89p_2m);
-  TendenciaDeBaixa :=  (Media34p <  Media20p_5m) e (Media20p_5m < Media89p_2m);
+  Se (Time >= HoraInicio) e (Time < HoraFim) então
+  INICIO
+  //----------------------------------------------------------------------------
+  // PERM -  OPERAÇÃO DE INVERSÃO DE FLUXO COM PADRÃO DE EXECUÇÃO DE RETORNO A MÉDIA
 
 
 
+   // plot(Topo);                  
+   // plot2(Fundo);
 
-   Se Not HasPosition então
-    Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m então
-      Se (close < Media34p) e (Open > Media34p) então
-        Se DifM34_20 e DifM20_89 e DifM12_34[10] e DifCloseVwap então
-          Inicio
-             SellShortLimit(Minima, Round(LimiteDeContratos / 2));
-             PERM := True;
 
-             BuyToCoverStop(MAXIMA);
-             PaintBar(255);
-          Fim;
+    DifM12_34 := (Media12p-Media34p) >= 100; 
+    DifM34_20 := (Media34p-Media20p_5m) >= 100;
+    DifM20_89 := (Media20p_5m-Media89p_2m) >= 100;
+  
+    DifCloseVwap := (Close-VwapD) >= 70;
+  
+    TendenciaDeAlta  := (Media34p >  Media20p_5m) e (Media20p_5m > Media89p_2m);
+    TendenciaDeBaixa :=  (Media34p <  Media20p_5m) e (Media20p_5m < Media89p_2m);
+  
+  
+     Se Not HasPosition então
+      Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m então
+        Se (close < Media34p) e (Open > Media34p) então
+          Se DifM34_20 e DifM20_89 e DifM12_34[10] então
+            Inicio
+               Se (close <= Fundo) então
+                 Inicio
+                    PERM_TOP := true;
+                    PaintBar(clPurple);
+                 fim
+                 senão
+                 Inicio
+                   SellShortLimit(Minima, Round(LimiteDeContratos / 2));
+                 fim;
+               
+               PERM := True;
+               Pacial_50PcntV := false;
+               PaintBar(255);
+            Fim;
 
+   Se not DifCloseVwap então
+     Inicio
+        BuyToCoverStop(VwapD+4, VwapD+5, SellPosition); 
+     fim;
+
+   Se PERM_TOP e PERM e not HasPosition então
+     se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m então
+       Inicio
+           SellShortLimit(Maxima, Round(LimiteDeContratos / 2));
+       fim;
+
+
+   se (close <= Media20p_5m) ou (close > Media34p+50) então
+    Inicio
+       PERM_TOP := false;
+    fim;
+
+  
    Se IsSold então
       Se PERM então
        Inicio
-           //Se (close <= SellPrice-100) então Pacial_75PcntV := true; // mini indice
-           Se (close <= Media20p_5m) então  
-             Inicio 
-               ClosePosition; 
-             Fim;
-       fim;
-
-
-
-
-
-
-
-
-  {
-  Se Not HasPosition então
-    Se TendenciaDeAlta e AgressaoVenda_1m e WeisWaveV_1m e BopV_1m então
-      Se (close < Media34p) e (Open > Media34p) então
-        Se DifM34_20 e DifM20_89 e DifM12_34[10] e DifCloseVwap então
-          Inicio
-             VENDER_PARC := True;
-             QuantContratos := Round(LimiteDeContratos / 2);
-             PrcEntrada := Minima;
-             PERM := True;
+           //BuyToCoverStop(SellPrice+100, SellPrice+121, SellPosition); // stop
+           BuyToCoverStop(Media34p+5, Media34p+6, SellPosition); // stop
+           Se WeisWaveC_1m e PowerVolumeLow_1m e not Pacial_50PcntV então 
+             Inicio         
+               BuyToCoverAtMarket(Round(SellPosition*0.50)); // mini indice     - SAIDA PARCIAL 75%
+               PaintBar(clAqua);
+               Pacial_50PcntV := true;
+             fim; 
              
-             BuyToCoverStop(MAXIMA);
-             PaintBar(255);
-          Fim; 
-
-
-    Se IsSold então
-      Se PERM então
-       Inicio
-          // Se (close <= SellPrice-70) então Pacial_75PcntV := true; // mini indice
-           Se (close <= Media20p_5m) então  
-             Inicio 
-               StopV := true;
-               QuantContratos := LimiteDeContratos;
-               PrcEntrada := close;
-               Pacial_75PcntV := false;  
-             Fim;
+           Se Pacial_50PcntV então
+             Inicio
+                 BuyToCoverStop(SellPrice-15, SellPosition);
+             fim;                                              
+  
+  
+             Se WeisWaveC_1m e PowerVolumePlus_1m e BopC_1m então  
+               Inicio 
+                 ClosePosition; 
+                 PaintBar(clblue);
+                 PERM := false;
+                 Pacial_50PcntV := false;
+               Fim;
+  
        fim;
 
-   Se IsSold e (Close > SellPrice) ou IsSold e (close < SellPrice) então 
-   Inicio
-       // VENDER_PARC := False;
-        //PERM := false;
-   Fim;
 
-   Se not HasPosition então
-     Inicio
-         Pacial_75PcntV := false;
-     Fim;
-
-
-  }
-
-
-
-
-
-
-
-
-
-  {
-    // CONFIRMAÇÃO DE ENTRADA ##    
-    COMPRAR      := False;
-    COMPRAR_PARC := False;
-
-    VENDER      := False;
-
-
-    // CONFIRMAÇÃO DE SAIDA ##
-    StopC          := False;
-    Pacial_25PcntC := False;
-    Pacial_50PcntC := False;
-    Pacial_75PcntC := False;
-
-    Pacial_25PcntV := False;
-    Pacial_50PcntV := False;
-    Pacial_75PcntV := False;
- }
-
-  //########## CONTROLE DE OPERAÇÕES ##########//
-  Se not HasPosition e (Time >= HoraInicio) e (Time < HoraFim) então
-     Inicio
-         Se COMPRAR então BuyAtMarket(LimiteDeContratos);
-         Se COMPRAR_PARC então BuyAtMarket(QuantContratos);
-
-         Se VENDER então SellShortAtMarket(LimiteDeContratos);
-         Se VENDER_PARC então SellShortLimit(PrcEntrada, QuantContratos);
-     fim;
-
-  Se HasPosition então
-     Inicio
-         Se IsBought então
-            Inicio
-               Se StopC então ClosePosition;
-               Se Pacial_25PcntC então SellToCoverAtMarket(Round(BuyPosition*0.25));
-               Se Pacial_50PcntC então SellToCoverAtMarket(Round(BuyPosition*0.50));
-               Se Pacial_75PcntC então SellToCoverAtMarket(Round(BuyPosition*0.75));
-
-               Se AlvoFixo então
-                  Inicio
-                     SellToCoverLimit(BuyPrice+TamanhoDoAlvoPts);
-                     SellToCoverStop(BuyPrice-TamanhoDoStopPts, BuyPrice-TamanhoDoStopPts-3);
-                  fim;
-            fim;
-            
-         Se IsSold então
-            Inicio
-               Se StopV então ClosePosition;
-               Se Pacial_25PcntV então BuyToCoverAtMarket(Round(SellPosition*0.25));
-               Se Pacial_50PcntV então BuyToCoverAtMarket(Round(SellPosition*0.50));
-               Se Pacial_75PcntV então BuyToCoverAtMarket(Round(SellPosition*0.75));
-
-                Se AlvoFixo então
-                  Inicio
-                     BuyToCoverLimit(SellPrice-TamanhoDoAlvoPts);
-                     BuyToCoverStop(SellPrice+TamanhoDoStopPts, SellPrice+TamanhoDoStopPts+3);
-                  fim;
-            fim;
-         Se (Time > HoraFechamento) então ClosePosition;
-     fim;
-
+  
+  
+  
+  
+  
+    
+  
+  
+  
+  
+  
+  
+  FIM;
+  Se (Time > HoraFechamento) então ClosePosition;
 
 END;
 
