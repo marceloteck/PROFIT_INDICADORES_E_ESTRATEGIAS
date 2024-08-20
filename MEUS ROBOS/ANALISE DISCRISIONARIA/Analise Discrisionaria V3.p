@@ -7,7 +7,7 @@ INPUT
    EntradaMinimaContratos(2);
 
    HoraInicio(900);
-   HoraFim(1800);
+   HoraFim(1740);
    HoraFechamento(1740);
 
    periodoTopDown(10);
@@ -59,12 +59,19 @@ VAR
    VwapD, AjustD : Float;
 
 
+   // ENTRADAS E SAIDAS VALIDAS //
+   EtrdC1, EtrdC2, EtrdC3, EtrdC4, EtrdC5, EtrdC6, EtrdC7, EtrdC8, EtrdC9, EtrdC10,
+   EtrdV1, EtrdV2, EtrdV3, EtrdV4, EtrdV5, EtrdV6, EtrdV7, EtrdV8, EtrdV9, EtrdV10 : Boolean;
+
+
    // NOVAS VARIAVEIS              #############
 
    DifM34_20, DifM20_89, DifM12_34, DifCloseVwap, 
    PERM_TOP: Boolean;
 
    A, B, mMin, mMax, Topo, Fundo, Atr: Float;
+
+   DifM12_34Fl, DifM34_20Fl, DifM20_89Fl : Float;
 
    ValidatPERM1, ValidatPERM2, ValidatPERM3, ValidatPERM4, ValidatPERM5, ValidatPERM6 : Boolean;
    OTB, OTB1, OTB2, OTB3, OTB4, OTB5 : Boolean;
@@ -76,7 +83,11 @@ VAR
     Posicao_   : float;
     Entrada_Compra_ : Array[0..1] of float;
     Entrada_Venda_ : Array[0..1] of float;
-    
+
+
+
+      PMB, PMS, PrC, PrV : Float;
+      SinalTTC, SinalTTV : Boolean;    
 
 
   // NOVAS VARIAVEIS  ^            #############
@@ -234,9 +245,21 @@ BEGIN
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
    VwapD := VWAP(1);
-   AjustD := PriorCote(4);
+   AjustD := PriorCote(4);                                    
 
    Atr := AvgTrueRange(10, 0);
+
+
+  // time in trade
+  PMB := PowerMeter(Osbuy, 1);  // 1 -> 1 MINUTO
+  PMS := PowerMeter(OsSell, 1);
+
+  PrC := Round(PMB/(PMB+PMS)*100);
+  PrV := Round(PMS/(PMB+PMS)*100);
+
+  SinalTTC := PrC > PrV;
+  SinalTTV := PrV > PrC; 
+
 
    
   //----------------------------------------------------------------------------
@@ -370,37 +393,82 @@ BEGIN
     ValidatPERM5 := (close > Media34p) e (open > Media34p); 
     ValidatPERM6 := DifM34_20 e DifCloseVwap e ((minima - Media34p) <= 30);
 
+    se not HasPosition e ValidatPERM4 e PivoUpDownDivergt(0) e ValidatPERM5 e ValidatPERM6 então    // COMPRAR
+    Inicio BuyAtMarket(2); PERM := true;  fim;
+
+    se not HasPosition e ValidatPERM1 e PivoUpDownDivergt(1) e ValidatPERM2 e ValidatPERM3 então    // VENDER
+    Inicio SellShortAtMarket(2); PERM := true;  fim;
 
 
-
-    se not HasPosition e ValidatPERM1 e PivoUpDownDivergt(1) e ValidatPERM2 e ValidatPERM3 então Inicio SellShortAtMarket(2); PERM := true;  fim;
-    se not HasPosition e ValidatPERM4 e PivoUpDownDivergt(0) e ValidatPERM5 e ValidatPERM6 então Inicio BuyAtMarket(2); PERM := true;  fim;
-
-
-    Se IsBought e PERM então
+    Se IsBought e PERM então      // STOP COMPRADO PERM
     Inicio
        se WeisWaveV_1m e (close > BuyPrice) e (BopV_1m) então  SellToCoverAtMarket(SellPosition);
        se WeisWaveV_1m e BopV_1m e PowerVolumePlus_1m e (close < Media34p) e PivoUpDownDivergt(1) então ClosePosition;
     fim;
 
-    Se IsSold e PERM então
+    Se IsSold e PERM então      // STOP VENDIDO PERM
     Inicio
        se WeisWaveC_1m e (close < SellPrice) e (BopC_1m) então BuyToCoverAtMarket(SellPosition);
        se WeisWaveC_1m e BopC_1m e PowerVolumePlus_1m e (close > Media34p) e PivoUpDownDivergt(0) então ClosePosition;
     fim;
 
-
+    
   
   //-------------------------------------------------------------------------------------------------------------------
 
-  // OPERAÇÃO DE TENDENCIA DE BAIXA - OTB          // Atr - volatilidade
-       //OTB1, OTB2, OTB3, OTB4, OTB5
-  OTB1 := TendenciaDeBaixa e (close < Media34p); 
-  OTB2 := WeisWaveV_1m e BopV_1m e (maxima >= Media34p) e OTB1 e (close < VwapD) e (close < AjustD);
-  OTB3 := (Atr <= 42) e (close > Media34p);
+  // OPERAÇÃO DE CONTINUAÇÃO DE TENDENCIA DE BAIXA - OTB          // Atr - volatilidade
+  //OTB : array de 1 a 10
+  //SinalTTC | times in trade comprador
+  //SinalTTV | times in trade vendedor
+
+//  WeisWaveC_Atl, WeisWaveV_Atl, WeisWaveC_Ant, WeisWaveV_Ant : Float;
+
+
+  DifM12_34Fl := (abs(Media12p-Media34p));
+  DifM34_20Fl := (abs(Media34p-Media20p_5m));
+  DifM20_89Fl := (abs(Media20p_5m-Media89p_2m));
+
+  // -----
+
+  //// -- PLACAR ESTATISTICO
+  Se (close > AjustD+(atr*2)) ou (close < AjustD-atr) então OTB[1] := true senão OTB[1] := false; // OTB[1] -> AJUSTE DIARIO
+  Se (Close > VwapD) então OTB[2] := True senão OTB[2] := False; //  OTB[2] -> fechamento maior que vwap diario
+  Se (Close < VwapD) então OTB[3] := True senão OTB[3] := False; //  OTB[3] -> fechamento menor que vwap diario
+  //Se (close > VwapD+(atr*2)) ou (close < VwapD-atr) então OTB[13] := true senão OTB[13] := false; // OTB[13] -> distante da vwap
+
+  Se (Media34p > Media20p_5m) então OTB[4] := True senão OTB[4] := False; //  OTB[4] -> Variavel simples de Tendencia de alta Alto risco **
+  Se (Media34p > Media20p_5m) e (Media20p_5m > Media89p_2m) então OTB[5] := True senão OTB[5] := False; //  OTB[5] -> Tendencia de alta Baixo Risco *
+
+  Se (Media34p < Media20p_5m) então OTB[6] := True senão OTB[6] := False; //  OTB[6] -> Tendencia de Baixa fraca
+  Se (Media34p < Media20p_5m) e (Media20p_5m < Media89p_2m) então OTB[7] := True senão OTB[7] := False; //  OTB[7] -> Tendencia de Baixa forte
+
+
+  Se (DifM34_20Fl >= (30)) e (DifM20_89Fl >= (30)) então OTB[8] := True senão OTB[8] := False; // OTB[8] -> se  ainda está em tendencia forte   ## NÃO FUNCIONAL AINDA
+
+  Se OTB[4] e (close < Media34p) e (close < Media20p_5m) então OTB[9] := true senão OTB[9] := false;  // Divergencia na tendencia de alta
+  Se OTB[6] e (close > Media34p) e (close > Media20p_5m) então OTB[10] := true senão OTB[10] := false;  // Divergencia na tendencia de baixa
   
- se PivoUpDownDivergt(0) e OTB1 e not OTB3 e DifM34_20 ou OTB2 então 
- Inicio SellShortAtMarket(2); OTB := true; fim;
+  Se BopC_1m e BopC_2m e WeisWaveC_1m e WeisWaveC_2m e RsiC_1m então OTB[11]:= True senão OTB[11] := False; // convervencia no movimento 1 e 2 minutos | COMPRADOR
+  Se BopV_1m e BopV_2m e WeisWaveV_1m e WeisWaveV_2m e RsiV_1m então OTB[12]:= True senão OTB[12] := False; // convervencia no movimento 1 e 2 minutos | VENDEDOR
+
+  Se (Open < VwapD) e (Close < VwapD) então OTB[13] := True senão OTB[13] := False; // o preço deve confirmar abaixo da vwap
+
+
+
+  /// ------------- 
+  // Validação vendedora
+
+  Se not HasPosition e not HasPendingOrders então
+    Inicio
+       Se OTB[6] então  // tendencia de baixa com maior risco
+       Se OTB[1] então  // distante do ajuste em zona segura 
+         Inicio
+           Se OTB[7] e OTB[13] e OTB[3] e (Media12p < Media34p) e (Maxima > VwapD) então PaintBar(clyellow); //SellShortLimit(VwapD-5, LimiteDeContratos); // entrada 1 continuação de tendencia depois da VWAP DIARIO
+         fim;
+      
+
+
+    Fim;
 
 
 
@@ -409,12 +477,7 @@ BEGIN
 
 
 
-
-
-
-
-
-
+   //Se OTB[13]então // distante da vwap zona segura 
 
 
 
@@ -452,7 +515,7 @@ BEGIN
       fim;
 
 
-
+        
 
 
 
@@ -464,8 +527,7 @@ BEGIN
   
   
   FIM;
-  Se (Time > HoraFechamento) então ClosePosition;
-  se HasPendingOrders e not HasPosition então ClosePosition;
+  Se (Time > HoraFechamento) ou HasPendingOrders e not HasPosition então ClosePosition;
   Se not HasPosition então
   inicio 
       PERM := false;
