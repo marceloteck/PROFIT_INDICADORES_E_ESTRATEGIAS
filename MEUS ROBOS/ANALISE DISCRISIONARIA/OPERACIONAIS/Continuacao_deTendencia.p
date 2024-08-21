@@ -263,7 +263,7 @@ BEGIN
   //-------------------------------------------------------------------------------------------------------------------
   // OPERAÇaO DE CONTINUAÇaO DE TENDENCIA DE BAIXA - OTB          
 
-  //------------------------------------ Validaçao vendedora                    
+  //------------------------------------ Validaçao vendedora com VWAP E AJUSTE                    
 
    // - puback na vwap com maxima acima da vwap , entrada no retorno
    Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] entao 
@@ -283,8 +283,11 @@ BEGIN
            
   // -
 
+  //------------------------------------ Validação Vendedora na Media de 34p
+  Se OTB[6] e OTB[14] então
+    Inicio
 
-
+    Fim;
 
 
 
