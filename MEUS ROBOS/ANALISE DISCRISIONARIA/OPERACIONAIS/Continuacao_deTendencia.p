@@ -6,6 +6,7 @@ INPUT
    DistanciaGradiente(25); 
     
 VAR
+   i : Inteiro; 
    DifM12_34Fl, DifM34_20Fl, DifM20_89Fl : Float;
    
    // 1 Minuto //
@@ -33,7 +34,9 @@ VAR
    // INDICADORES GERAIS // 
    VwapD, AjustD, Atr : Float;
 
-   OTB : Array [1..20] of Boolean;
+   OTB    : Array [1..20] of Boolean;
+   PAINTC : Array [1..10] of Boolean;
+   PAINTV : Array [1..10] of Boolean;
 
    Origem_Compra, Origem_Venda  : float;
    Contador_  : Inteiro;
@@ -201,67 +204,79 @@ BEGIN
 
   Se (Time >= HoraInicio) e (Time < HoraFim) e (ContadorDeCandle > 1) então
   INICIO
-   //-------------------------------------------------------------------------------------------------------------------
-  // OPERAÇÃO DE CONTINUAÇÃO DE TENDENCIA DE BAIXA - OTB          // Atr - volatilidade
-
-
-
+  // -----
   DifM12_34Fl := (abs(Media12p-Media34p));
   DifM34_20Fl := (abs(Media34p-Media20p_5m));
   DifM20_89Fl := (abs(Media20p_5m-Media89p_2m));
-
   // -----
 
   //// -- PLACAR ESTATISTICO
+
+  //-- AJUSTE E VWAP
   Se (close > AjustD+(atr*2)) ou (close < AjustD-atr) então OTB[1] := true senão OTB[1] := false; // OTB[1] -> AJUSTE DIARIO
   Se (Close > VwapD) então OTB[2] := True senão OTB[2] := False; //  OTB[2] -> fechamento maior que vwap diario
   Se (Close < VwapD) então OTB[3] := True senão OTB[3] := False; //  OTB[3] -> fechamento menor que vwap diario
-  //Se (close > VwapD+(atr*2)) ou (close < VwapD-atr) então OTB[13] := true senão OTB[13] := false; // OTB[13] -> distante da vwap
 
+  // Fechamento e abertura na vwap
+  Se (Open < VwapD) e (Close < VwapD) então OTB[13] := True senão OTB[13] := False; // o preço deve confirmar abaixo da vwap
+  Se (Maxima > VwapD) então OTB[16] := True senão OTB[16] := False; // Maxima maior que vwap
+  Se (Minima < VwapD) então OTB[17] := True senão OTB[17] := False; // Minima Menor que vwap
+  Se (close[1] < VwapD)  e (close[2] < VwapD) e (ContadorDeCandle > 2) então OTB[20]:= True senão OTB[20] := False; // 
+  //-- 
+
+  //-- MÉDIAS MOVEIS
   Se (Media34p > Media20p_5m) então OTB[4] := True senão OTB[4] := False; //  OTB[4] -> Variavel simples de Tendencia de alta Alto risco **
   Se (Media34p > Media20p_5m) e (Media20p_5m > Media89p_2m) então OTB[5] := True senão OTB[5] := False; //  OTB[5] -> Tendencia de alta Baixo Risco *
 
   Se (Media34p < Media20p_5m) então OTB[6] := True senão OTB[6] := False; //  OTB[6] -> Tendencia de Baixa fraca
   Se (Media34p < Media20p_5m) e (Media20p_5m < Media89p_2m) então OTB[7] := True senão OTB[7] := False; //  OTB[7] -> Tendencia de Baixa forte
 
+  Se (Media12p < Media34p) então OTB[14] := True senão OTB[14] := False; // Media de 12 menor que a media de 34
+  Se (Media12p > Media34p) então OTB[15] := True senão OTB[15] := False; // Media de 12 menor que a media de 34
 
   Se (DifM34_20Fl >= (30)) e (DifM20_89Fl >= (30)) então OTB[8] := True senão OTB[8] := False; // OTB[8] -> se  ainda está em tendencia forte   ## NÃO FUNCIONAL AINDA
 
+  Se (Media34p < Media34p[34]) e (Media20p_5m < Media20p_5m[90]) e (Media89p_2m < Media89p_2m[178]) então OTB[19] := True senão OTB[19] := False;
+
+  // Fechamento e abertura nas medias
   Se OTB[4] e (close < Media34p) e (close < Media20p_5m) então OTB[9] := true senão OTB[9] := false;  // Divergencia na tendencia de alta
   Se OTB[6] e (close > Media34p) e (close > Media20p_5m) então OTB[10] := true senão OTB[10] := false;  // Divergencia na tendencia de baixa
-  
+  //-- 
+
+  //-- INDICADORES DE FORÇA E DIVERGENCIAS
   Se BopC_1m e BopC_2m e WeisWaveC_1m e WeisWaveC_2m e RsiC_1m então OTB[11]:= True senão OTB[11] := False; // convervencia no movimento 1 e 2 minutos | COMPRADOR
   Se BopV_1m e BopV_2m e WeisWaveV_1m e WeisWaveV_2m e RsiV_1m então OTB[12]:= True senão OTB[12] := False; // convervencia no movimento 1 e 2 minutos | VENDEDOR
 
-  Se (Open < VwapD) e (Close < VwapD) então OTB[13] := True senão OTB[13] := False; // o preço deve confirmar abaixo da vwap
+  Se BopV_1m  e WeisWaveV_1m então OTB[18]:= True senão OTB[18] := False; // 
 
 
 
-  /// ------------- 
+
+  //-------------------------------------------------------------------------------------------------------------------
+  // OPERAÇÃO DE CONTINUAÇÃO DE TENDENCIA DE BAIXA - OTB          
+
   //       Validação vendedora                    
-
-  Se not HasPosition então
-    Inicio
-       Se OTB[6]   // tendencia de baixa com maior risco
-       e  OTB[1] então  // distante do ajuste em zona segura 
-         Inicio
-           Se OTB[7] e OTB[13] e OTB[3] e (Media12p < Media34p) e (Maxima > VwapD) então
-           INICIO 
-               SellShortLimit(VwapD-5, 2); // entrada 1 continuação de tendencia depois da VWAP DIARIO
-               PaintBar(255);
-           FIM;
-
-         fim;
-    Fim;
+       Se OTB[6] então   // tendencia de baixa com maior risco
+       Se OTB[1] então  // distante do ajuste em zona segura 
+         INICIO
+           // - Vwap
+           Se OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] então 
+             Inicio 
+               Se not HasPosition então SellShortLimit(VwapD-5, 2); // ENTRADA NA VWAP
+               PAINTV[1] := True; 
+             fim 
+             Senão PAINTV[1] := False;  
+          // -
 
 
-         //  Se (close < open) então SellShortLimit(close, LimiteDeContratos);
-          //Se (close > open) então BuyLimit(close, LimiteDeContratos);
-
-       // Se IsSold e (close > Media89p_2m) então BuyToCoverAtMarket(SellPosition);
-      //  Se IsBought e (close < Media89p_2m) então SellShortAtMarket(BuyPosition);
 
 
+
+         FIM;
+
+
+
+    // se OTB[19] então PAINTV[1] := true;
 
 
 
@@ -270,6 +285,24 @@ BEGIN
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+    //----------------------------------------------------------------------------
+    // REGRA DE COLORAÇÃO
+    //----------------------------------------------------------------------------
+
+    FOR i := 1 TO 10 Do Se PAINTV[i] então PaintBar(255);      // COLORAÇÃO VENDEDORA
+    FOR i := 1 TO 10 Do Se PAINTC[i] então PaintBar(clGreen);  // COLORAÇÃO COMPRADORA
 
 
     //----------------------------------------------------------------------------
