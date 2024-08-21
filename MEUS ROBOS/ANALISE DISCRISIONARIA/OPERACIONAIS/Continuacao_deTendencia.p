@@ -299,18 +299,16 @@ BEGIN
 
 
   //------------------------------------ Validaçao Compradora                    
-       Se OTB[6] entao   // tendencia de Alta com maior risco
-       Se OTB[1] entao  // distante do ajuste em zona segura 
-         INICIO
+
            // - Vwap COMPRADOR
-           Se OTB[5] e OTB[8] e OTB[21] e OTB[15] e OTB[17] e OTB[22] e OTB[23] entao 
+           Se OTB[1] e OTB[5] e OTB[8] e OTB[21] e OTB[15] e OTB[17] e OTB[22] e OTB[23] entao 
              Inicio 
                Se not HasPosition entao BuyLimit(VwapD+5, 2); // ENTRADA DE VENDA NA VWAP
                PAINTC[1] := True; 
              fim 
              Senao PAINTC[1] := False;  
           // -
-         FIM;
+
 
 
 
