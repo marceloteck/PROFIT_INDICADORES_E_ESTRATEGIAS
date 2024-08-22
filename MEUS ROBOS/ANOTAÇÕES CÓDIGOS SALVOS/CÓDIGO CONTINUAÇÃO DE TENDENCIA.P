@@ -1,0 +1,28 @@
+INICIO
+
+   // - puback na vwap com maxima acima da vwap , entrada no retorno
+   Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] entao 
+     Inicio 
+       Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
+       PAINTV[1] := True; 
+     fim  Senao PAINTV[1] := False; 
+ 
+   // fechamento maior que vwap e ajuste com tendencia forte de baixa 
+   Se OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] entao 
+     Inicio 
+       Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
+       PAINTV[2] := True; 
+     fim Senao PAINTV[2] := False; 
+        
+ 
+   //Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste
+   Se OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] entao    
+     Inicio 
+       Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
+       PAINTV[3] := True; 
+     fim Senao PAINTV[3] := False;        
+        
+        
+           
+  // -
+FIM

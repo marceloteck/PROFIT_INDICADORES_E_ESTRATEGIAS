@@ -249,7 +249,13 @@ BEGIN
   // Fechamento e abertura nas medias
   Se OTB[4] e (close < Media34p) e (close < Media20p_5m) entao OTB[9] := true senao OTB[9] := false;  // Divergencia na tendencia de alta
   Se OTB[6] e (close > Media34p) e (close > Media20p_5m) entao OTB[10] := true senao OTB[10] := false;  // Divergencia na tendencia de baixa
-  //-- 
+
+  Se (Maxima > Media20p_5m) entao OTB[26] := True senao OTB[26] := False; // Maxima maior que Media20p_5m
+
+  Se (Maxima > Media89p_2m) entao OTB[27] := True senao OTB[27] := False; // Maxima maior que Media89p_2m
+  Se (Minima < Media89p_2m) entao OTB[29] := True senao OTB[29] := False; // Maxima Menor que Media89p_2m
+
+  Se (Maxima > Media12p) entao OTB[28] := True senao OTB[28] := False; // Maxima maior que Media12p
 
   //-- INDICADORES DE FORÇA E DIVERGENCIAS
   Se BopC_1m e BopC_2m e WeisWaveC_1m e WeisWaveC_2m e RsiC_1m entao OTB[11]:= True senao OTB[11] := False; // convervencia no movimento 1 e 2 minutos | COMPRADOR
@@ -257,41 +263,21 @@ BEGIN
 
   Se BopV_1m  e WeisWaveV_1m entao OTB[18]:= True senao OTB[18] := False; // 
 
-
-
-
   //-------------------------------------------------------------------------------------------------------------------
   // OPERAÇaO DE CONTINUAÇaO DE TENDENCIA DE BAIXA - OTB          
 
   //------------------------------------ Validaçao vendedora com VWAP E AJUSTE                    
+    Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] ou // puback na vwap com maxima acima da vwap , entrada no retorno
+       OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] ou // fechamento maior que vwap e ajuste com tendencia forte de baixa  
+       OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] ou // Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste
+       OTB[6] E OTB[8] e OTB[28] e OTB[29] e (open > VwapD) e (Close < Media89p_2m) e (Close < VwapD) ou
+       PowerVolumePlus_1m e (close > open) e OTB[7] e (Maxima >= Media34p) e (Minima <= Media34p) e (maxima < Media20p_5m) 
 
-   // - puback na vwap com maxima acima da vwap , entrada no retorno
-   Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] entao 
-     Inicio 
-       Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
-       PAINTV[1] := True; 
-     fim 
-     Senao PAINTV[1] := False; 
-   
-   // fechamento maior que vwap e ajuste com tendencia forte de baixa 
-   Se OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] entao 
-     Inicio 
-       Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
-       PAINTV[2] := True; 
-     fim 
-     Senao PAINTV[2] := False; 
-           
-  // -
-
-  //------------------------------------ Validação Vendedora na Media de 34p
-  Se OTB[6] e OTB[14] então
-    Inicio
-
-    Fim;
-
-
-
-
+    entao 
+      Inicio
+         Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
+         PAINTV[1] := True;
+      Fim Senao PAINTV[1] := False;
 
 
 
