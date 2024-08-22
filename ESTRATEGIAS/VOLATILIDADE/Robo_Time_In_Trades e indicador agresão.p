@@ -3,7 +3,7 @@ INPUT
 
 VAR
   Dif, PMB, PMS, PrC, PrV : Float;
-  SinalC, SinalV, StopC, Stopv : Boolean;
+  SinalCTT, SinalVTT, StopC, Stopv : Boolean;
 
 BEGIN
   PMB := PowerMeter(Osbuy, TempoGrafico);
@@ -15,8 +15,8 @@ BEGIN
   Dif := PrC-PrV;
   plot(Dif);
 
-  SinalC := PrC > PrV;
-  SinalV := PrV > PrC;
+  SinalCTT := PrC > PrV;
+  SinalVTT := PrV > PrC;
 
   StopC := SinalV;
   StopV :=  SinalC;

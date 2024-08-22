@@ -3,11 +3,15 @@ INPUT
    HoraInicio(900);
    HoraFim(1740);
    HoraFechamento(1740);
-   DistanciaGradiente(25); 
+   DistanciaGradiente(25);
+   TempoGraficoOperation(1); 
     
 VAR
    i : Inteiro; 
    DifM12_34Fl, DifM34_20Fl, DifM20_89Fl : Float;
+   PMB, PMS, PrC, PrV : Float;
+
+   SinalCTT, SinalVTT : Boolean;
    
    // 1 Minuto //
    Media34p, Media12p : Float;
@@ -149,12 +153,20 @@ VAR
 BEGIN
    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // CHAMADA DOS INDICADORES
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    VwapD := VWAP(1);
    AjustD := PriorCote(4);                                    
 
    Atr := AvgTrueRange(10, 0);
+
+  PMB := PowerMeter(Osbuy, TempoGraficoOperation);
+  PMS := PowerMeter(OsSell, TempoGraficoOperation);
+
+  PrC := Round(PMB/(PMB+PMS)*100);
+  PrV := Round(PMS/(PMB+PMS)*100);
+
+  SinalCTT := PrC > PrV;
+  SinalVTT := PrV > PrC;
 
   //----------------------------------------------------------------------------
   // 1 MINUTO 
@@ -276,8 +288,14 @@ BEGIN
     entao 
       Inicio
          Se not HasPosition entao SellShortLimit(close, 2); // ENTRADA DE VENDA NA VWAP
+         Se not HasPosition e SinalVTT então SellShortAtMarket; // entrada com fluxo
          PAINTV[1] := True;
       Fim Senao PAINTV[1] := False;
+
+
+
+
+
 
 
 
