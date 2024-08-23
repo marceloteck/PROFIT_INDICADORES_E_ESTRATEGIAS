@@ -10,6 +10,7 @@ VAR
    i : Inteiro; 
    DifM12_34Fl, DifM34_20Fl, DifM20_89Fl : Float;
    PMB, PMS, PrC, PrV : Float;
+   GatilhoVenda, GatilhoCompra : Boolean;
 
    SinalCTT, SinalVTT : Boolean;
    
@@ -168,6 +169,13 @@ BEGIN
   SinalCTT := PrC > PrV;
   SinalVTT := PrV > PrC;
 
+
+  //* gatilho
+//  INDICADOR GATILHO
+  GatilhoCompra := GATILHO = 1;
+  GatilhoVenda  := GATILHO = 2;
+
+
   //----------------------------------------------------------------------------
   // 1 MINUTO 
   //----------------------------------------------------------------------------
@@ -279,11 +287,14 @@ BEGIN
   // OPERAÇaO DE CONTINUAÇaO DE TENDENCIA DE BAIXA - OTB          
 
   //------------------------------------ Validaçao vendedora com VWAP E AJUSTE                    
-    Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] ou // puback na vwap com maxima acima da vwap , entrada no retorno
-       OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] ou // fechamento maior que vwap e ajuste com tendencia forte de baixa  
-       OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] ou // Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste
-       OTB[6] E OTB[8] e OTB[28] e OTB[29] e (open > VwapD) e (Close < Media89p_2m) e (Close < VwapD) ou
-       PowerVolumePlus_1m e (close > open) e OTB[7] e (Maxima >= Media34p) e (Minima <= Media34p) e (maxima < Media20p_5m) 
+    Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] // puback na vwap com maxima acima da vwap , entrada no retorno
+       ou OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] // fechamento maior que vwap e ajuste com tendencia forte de baixa  
+       ou OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] // Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste
+       ou OTB[6] E OTB[8] e OTB[28] e OTB[29] e (open > VwapD) e (Close < Media89p_2m) e (Close < VwapD)
+       ou PowerVolumePlus_1m e GatilhoVenda e OTB[7]  
+       ou PowerVolumePlus_1m e OTB[6] e (close < Media34p) e (open < Media34p) e (maxima > Media34p) e (Media89p_2m > Media34p) //e (close > open) e OTB[7] e (Maxima >= Media34p) e (Minima <= Media34p) e (maxima < Media20p_5m)
+       // Exaustao_Vol_1m e (Media34p > Media20p_5m) e (Media89p_2m > Media20p_5m) e (Maxima >= Media34p-3) e (Minima < Media20p_5m) e (Minima < Media12p)
+
 
     entao 
       Inicio

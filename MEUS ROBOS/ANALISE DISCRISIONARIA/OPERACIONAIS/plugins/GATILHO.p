@@ -1,0 +1,59 @@
+VAR
+    Corpo, AmpCandle, pCorpo, PavioSup, PavioInf,
+    mCorpo, mAmpCandle, mpCorpo : Float;
+    Martl, Estrl : Boolean;
+
+    PercentMaxCorpo, PercerntMaxPavio, TamanhoTotalMax, TamanhoTotalMin : Float;
+
+BEGIN
+   PercentMaxCorpo := 30.00;
+   PercerntMaxPavio := 10.00;
+   TamanhoTotalMax := 300;
+   TamanhoTotalMin := 50;
+
+
+
+
+   Corpo     := Abs(Close-Open);        // AMPLITUDE DO CORPO 
+   AmpCandle := (maxima-minima);        // AMPLITUDE DO CANDLE
+   pCorpo    := (Corpo/AmpCandle)*100;  // PERCENTUAL DO CORPO
+
+
+
+   Se (close > Open) e (pCorpo < PercentMaxCorpo) então    // CANDLE DE ALTA
+     Inicio
+         PavioSup :=  maxima - close;
+         PavioInf :=  Open - Minima;
+     fim;
+
+   Se (close < Open) e (pCorpo <= PercentMaxCorpo) então    // CANDLE DE BAIXA
+     Inicio
+         PavioSup :=  maxima - open;
+         PavioInf :=  close - Minima;
+     fim;
+
+   Se (close = Open) e (pCorpo < PercentMaxCorpo) então    // CANDLE neutro
+     Inicio
+         PavioSup :=  maxima - close;
+         PavioInf :=  close - Minima;
+     fim;
+
+
+
+
+
+
+     Martl :=  (AmpCandle > TamanhoTotalMin) e (AmpCandle < TamanhoTotalMax) e
+               (pCorpo < PercentMaxCorpo) e (PavioSup < PavioInf) e 
+               ((PavioSup/AmpCandle)*100 < PercerntMaxPavio);
+
+
+     Estrl :=  (AmpCandle > TamanhoTotalMin) e (AmpCandle < TamanhoTotalMax) e
+               (pCorpo < PercentMaxCorpo) e (PavioSup > PavioInf) e 
+               ((PavioInf/AmpCandle)*100 < PercerntMaxPavio);
+
+    Se Martl então plot(1);
+    se Estrl então plot(2);
+
+END;
+
