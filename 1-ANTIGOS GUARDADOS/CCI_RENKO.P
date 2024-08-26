@@ -1,0 +1,50 @@
+INPUT
+ CCI_Periodo(14);
+VAR
+  nCCI, MediaCCI : float;
+  Md17, Md7 : float;
+
+  ALTA, BAIXA : boolean;
+
+
+ INICIO
+ nCCI := CCI(14);
+ MediaCCI := media(9, nCCI);
+
+Md7 := mediaExp(7, close);
+Md17 := mediaexp(17, close);
+
+
+
+se (Md7 > Md17)então
+Inicio
+ ALTA := true;
+ BAIXA := false;
+fim
+
+senão 
+se (Md7 < Md17) então
+Inicio
+ ALTA := false;
+ BAIXA := true;
+fim;
+
+
+   // ########################################### Executar Ordens
+  if (ALTA) then
+    BuyAtMarket();
+
+  if (BAIXA) then
+    SellShortAtMarket();
+
+
+ FIM;
+
+
+
+
+
+
+
+
+                                              

@@ -1,0 +1,36 @@
+// Definir variáveis e parâmetros
+input
+  PeriodoMediaCD(21); // Período da média do Cumulative Delta
+
+var
+  CDValor: float; // Valor do Cumulative Delta
+  MediaCD: float; // Média do Cumulative Delta
+  MediaMOV: float; // Média dos preços
+  VolumeComprado: float; // Volume comprado
+  VolumeVendido: float; // Volume vendido
+  MComparationAlta: Boolean;
+  MComparationBaixa: Boolean;
+
+Inicio
+  // Calcular o volume comprado e vendido
+  VolumeComprado := AgressionVolBuy;
+  VolumeVendido := AgressionVolSell;
+
+  // Calcular o Cumulative Delta
+  CDValor := AccAgressSaldo(1); // Usar o acúmulo de agressão - saldo com quantidade
+
+  // Calcular a média de 21 períodos do Cumulative Delta e dos preços
+  MediaCD := MediaExp(PeriodoMediaCD, CDValor);
+  MediaMOV := MediaExp(PeriodoMediaCD, close);
+
+  // Determinar condições de comparação
+  MComparationAlta := (fechamento > MediaMOV) e (abertura > MediaMOV);
+  MComparationBaixa := (fechamento < MediaMOV) e (abertura < MediaMOV); // Corrigido para `<`
+
+  // Condições de Coloração
+  Se (CDValor < MediaCD) e MComparationBaixa então
+    PaintBar(clRed) // Tendência de baixa - CD abaixo da média e agressões vendedoras 
+
+  senão se (CDValor > MediaCD) e MComparationAlta então
+    PaintBar(clGreen); // Tendência de alta - CD acima da média e agressões compradoras
+fim

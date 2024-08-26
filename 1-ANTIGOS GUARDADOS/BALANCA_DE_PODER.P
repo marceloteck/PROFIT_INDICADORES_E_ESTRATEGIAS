@@ -1,0 +1,72 @@
+// Definir variáveis e parâmetros
+input 
+  PeriodoBOP(16);
+  TipoMediaBOP(0); // 0 - Aritmética, 1 - Exponencial, 2 - Welles Wilder, 3 - Ponderada
+  PeriodoMediaExp(17); // Período da média exponencial
+
+var
+  BOPValor: float;
+  MediaExponencialBOP: float;
+  MediaMovel, RSIvalor : float;
+
+  COMPRAR_, VENDER_ : boolean;
+
+Inicio
+  MediaMovel := media(PeriodoBOP, close);
+  RSIvalor :=  rsi(PeriodoBOP, 0);
+
+  // Calcular Balança do Poder
+  BOPValor := BalanceOfPower(PeriodoBOP, TipoMediaBOP);
+
+
+
+  // Calcular Média Exponencial da Balança do Poder
+  MediaExponencialBOP := MediaExp(PeriodoMediaExp, BOPValor);
+
+
+  COMPRAR_ := (MediaExponencialBOP > 0) e (BOPValor > 0) e (close > MediaMovel) e (open > MediaMovel) e (RSIvalor > 50);
+  VENDER_ :=  (MediaExponencialBOP < 0) e (BOPValor < 0) e (close < MediaMovel) e (open < MediaMovel) e (RSIvalor < 50);
+  
+  
+  
+  se COMPRAR_ então
+      inicio
+        PaintBar(clGreen); // Balança do Poder acima de 0 e Média Exponencial acima de 0 - Tendência de alta
+        se not HasPosition então BuyAtMarket;
+      fim
+
+  senão se VENDER_  então
+  inicio
+      PaintBar(clRed); // Balança do Poder abaixo de 0 e Média Exponencial abaixo de 0 - Tendência de baixa
+      se not HasPosition então SellShortAtMarket;
+   fim
+  senão
+    PaintBar(clwhite);
+
+
+
+
+ se IsBought então
+ inicio
+ SellShortStop(MediaMovel-0.5);
+ //se not (COMPRAR_) e (close < MediaMovel) então ClosePosition;
+ se (close >= BuyPrice + 3) então SellToCoverLimit(BuyPrice+1);
+ fim;
+
+
+
+
+
+ se IsSold então
+ inicio
+  //BuyStop(MediaMovel+0.5);
+ //se not (VENDER_) e (close > MediaMovel) então ClosePosition;
+  se (close <= SellPrice - 3) então BuyLimit(SellPrice-1);
+ fim;
+
+
+
+
+    plot(MediaMovel);
+
+fim 

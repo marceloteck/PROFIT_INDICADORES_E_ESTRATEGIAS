@@ -10,7 +10,9 @@ VAR
    i : Inteiro; 
    DifM12_34Fl, DifM34_20Fl, DifM20_89Fl, PullBackFinderH, PullBackFinderL : Float;
    PMB, PMS, PrC, PrV : Float;
-   GatilhoVenda, GatilhoCompra : Boolean;
+   GatilhoVenda, GatilhoCompra, Candlepaviosup : Boolean;
+
+   NContratros : Inteiro;
 
    SinalCTT, SinalVTT : Boolean;
    
@@ -223,6 +225,7 @@ BEGIN
 //  INDICADOR GATILHO
   GatilhoCompra := GATILHO_Plugin = 1;
   GatilhoVenda  := GATILHO_Plugin = 2;
+  Candlepaviosup:= GATILHO_Plugin = 3;
 
 
   //----------------------------------------------------------------------------
@@ -337,14 +340,20 @@ BEGIN
 
   //------------------------------------ Validaçao vendedora com VWAP E AJUSTE                    
     Se OTB[1] e OTB[7] e OTB[8] e OTB[13] e OTB[14] e OTB[16] e OTB[19] e OTB[20] // puback na vwap com maxima acima da vwap , entrada no retorno
-       ou OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] e (PullBackFinderH < 0) // fechamento maior que vwap e ajuste com tendencia forte de baixa  
-       ou OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] // Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste
-       ou OTB[6] E OTB[8] e OTB[28] e OTB[29] e (open > VwapD) e (Close < Media89p_2m) e (Close < VwapD)
+       ou OTB[24] e OTB[7] e OTB[13] e OTB[14] e OTB[16] e OTB[20] e OTB[25] e (PullBackFinderH < 0)  e (Media20p_5m < Media20p_5m[5]) // fechamento maior que vwap e ajuste com tendencia forte de baixa  
+       ou OTB[4] e OTB[16] e OTB[25] e OTB[13] e OTB[24] e OTB[26] // Tendencia de alta 34>20 | Maxima > Vwap | Maxima > ajuste | preço < vwap | preço < ajuste    
+       ou OTB[6] E OTB[8] e OTB[28] e OTB[29] e (open > VwapD) e (Close < Media89p_2m) e (Close < VwapD)    
        ou PowerVolumePlus_1m e GatilhoVenda e OTB[6] e (close[2] < open[1]) e (PullBackFinderH[2] < 0)  
-       ou PowerVolumePlus_1m e OTB[6] e (close < Media34p) e (open < Media34p) e (maxima > Media34p) e (Media89p_2m > Media34p) e (Media12p < Media34p) e (close > Media12p) e (open > Media12p) 
-       //----ou Exaustao_Vol_1m e (Media34p > Media20p_5m) e (Media89p_2m > Media20p_5m) e (Maxima >= Media34p-3) e (Minima < Media20p_5m) e (Minima < Media12p)
+       ou PowerVolumePlus_1m e OTB[6] e (close < Media34p) e (open < Media34p) e (maxima > Media34p) e (Media89p_2m > Media34p) e (Media12p < Media34p) e (close > Media12p) e (open > Media12p)
+          e OTB[1]
+       //ou Exaustao_Vol_1m e (Media34p > Media20p_5m) e (Media89p_2m > Media20p_5m) e (Maxima >= Media34p-3) e (Minima < Media20p_5m) e (Minima < Media12p)
        //----ou PivoUpDownDivergt(0) e OTB[6] e (close[3] < Media34p) 
-       //ou ((Atr[1]/1.5) <= close[1]-open[1]) e (close < open) e OTB[7] e (PullBackFinderH < 0) e (PullBackFinderL[1] < 0)
+       ou ((Atr[1]/1.5) <= close[1]-open[1]) e (close < open) e OTB[7] e (PullBackFinderH < 0) e (PullBackFinderL[1] < 0)
+       ou OTB[7] e SinalVTT e (close < Media34p) e (MAXIMA >= Media34p) e (PullBackFinderH < 0)
+       ou GatilhoVenda e OTB[7] e (close > Media12p) e (close[1] > open[1]) e (maxima < Media89p_2m) e (PullBackFinderH[2] < 0)
+       ou (maxima > AjustD) e (close[1] > open[1]) e (close[2] > open[2]) e (Media12p < Media34p) e (close < AjustD) e (maxima > AjustD)
+       ou (close[1] > open[1]) e (close[2] > open[2]) e(close < Media34p) e (open < Media34p) e (maxima >= Media34p) e (PullBackFinderL[1] < 0) e (close < open) e OTB[7]         // ESTE CÓDIGO INDENDIFICA PUBACK MAS TÁ DANDO ERROS NO FINAL DA TENDENCIA        
+       ou OTB[6] e (Media89p_2m < Media34p) e (Media89p_2m < Media20p_5m) e (open > Media89p_2m) e (open > Media12p) e (close < Media89p_2m) e (close < Media34p) e (abs(Media89p_2m - Media20p_5m) >= 50) e (Media20p_5m < Media20p_5m[15])
 
     entao 
       Inicio
@@ -365,17 +374,46 @@ BEGIN
 
 
 
-
   //------------------------------------ Validaçao Compradora                    
-
+     {
            // - Vwap COMPRADOR
            Se OTB[1] e OTB[5] e OTB[8] e OTB[21] e OTB[15] e OTB[17] e OTB[22] e OTB[23] entao 
              Inicio 
                Se not HasPosition entao BuyLimit(VwapD+5, 2); // ENTRADA DE VENDA NA VWAP
-               PAINTC[1] := True; 
+              // PAINTC[1] := True; 
              fim 
              Senao PAINTC[1] := False;  
           // -
+
+
+ }
+
+ {
+ 
+# TESTAR CÓDIGOS DEPOIS
+
+
+    //se (close < Media20p_5m) e (open < Media20p_5m) e OTB[7] e (MAXIMA > Media20p_5m)  então paintbar(clyellow);
+   //se Candlepaviosup e (close[1] > open[1]) e (maxima > Media34p) e OTB[7]  então PaintBar(clyellow);   // testar
+
+   //--se (close[1] > open[1]) e (close[2] > open[2]) e(close < Media34p) e (open < Media34p) e (maxima >= Media34p) e (PullBackFinderL[1] < 0) e (close < open) e OTB[7] então paintbar(clyellow);
+
+   //Se OTB[6] e (VwapD > Media89p_2m) e (Media89p_2m > Media34p)  e (Media89p_2m < Media20p_5m) e (maxima >= Media89p_2m) e (Media12p < Media34p) e (Media20p_5m > Media89p_2m)  então paintbar(clyellow);
+   Se OTB[6] e (Media89p_2m < Media34p) e (Media89p_2m < Media20p_5m) e (open > Media89p_2m) e (open > Media12p) e (close < Media89p_2m) e (close < Media34p) e (abs(Media89p_2m - Media20p_5m) >= 50)  então paintbar(clyellow);
+
+                           
+
+                                                //  e (Media89p_2m < Media20p_5m) e (maxima >= Media89p_2m) e (Media12p < Media34p) e (close < Media89p_2m)
+
+
+
+ 
+ }
+
+
+
+
+
 
 
 
@@ -411,29 +449,32 @@ BEGIN
     //----------------------------------------------------------------------------
     Origem_Compra := BuyPrice + DistanciaGradiente;
     Origem_Venda := SellPrice - DistanciaGradiente;
+    
+    Se(LimiteDeContratos > 10) então NContratros := Round(LimiteDeContratos / 10) senão
+    Se(LimiteDeContratos <= 10) então  NContratros := 1;
 
 
-    se IsBought entao  // ESTÁ VEMDIDO
+    se IsBought entao  
     inicio
      // inicio das compras
       se (BuyPosition <= LimiteDeContratos) entao
       inicio
-        FOR Contador_ := (BuyPosition + 1) TO LimiteDeContratos Do
+        FOR Contador_ := (NContratros + 1) TO LimiteDeContratos Do
           inicio
           Posicao_ := Origem_Compra - (Contador_ * DistanciaGradiente);
-            se (close >  Posicao_) entao BuyLimit(Posicao_, 1);
+            se (close >  Posicao_) entao BuyLimit(Posicao_, NContratros);
           fim;
       fim;
     fim; 
 
-    se  IsSold entao  // ESTÁ COMPRADO
+    se  IsSold entao  
       inicio
         se (SellPosition <= LimiteDeContratos) entao
         inicio
-          FOR Contador_ := (SellPosition + 1) TO LimiteDeContratos Do
+          FOR Contador_ := (NContratros + 1) TO LimiteDeContratos Do
             inicio
             Posicao_ := Origem_Venda + (Contador_ * DistanciaGradiente);
-              se (close <  Posicao_) entao SellShortLimit(Posicao_, 1);
+              se (close <  Posicao_) entao SellShortLimit(Posicao_, NContratros);
             fim;
         fim;
       fim;   
@@ -444,3 +485,15 @@ BEGIN
 
 END;  { BLOCO PRINCIPAL }
 
+
+
+
+
+
+
+
+
+  {
+              Se (NContratros = (NContratros + 1)) então Posicao_ := Origem_Venda + (2 * DistanciaGradiente) senão
+                ;
+  }
