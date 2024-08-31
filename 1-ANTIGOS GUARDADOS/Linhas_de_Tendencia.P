@@ -1,0 +1,43 @@
+// Definir variáveis e parâmetros
+input 
+  PeriodosPivo(3); // Número de períodos para considerar como pivô
+
+var
+  FechamentoAtual: float;
+  FechamentoAnterior: array[1..5] of float;
+  Topos: array[1..10] of float;
+  Fundos: array[1..10] of float;
+  ContadorTopo: integer;
+  ContadorFundo: integer;
+  i: integer;
+
+Inicio
+  // Inicialização
+  FechamentoAtual := Fechamento;
+
+  // Atualizar fechamentos anteriores
+  para i := 4 até 1 faça
+    FechamentoAnterior[i] := FechamentoAnterior[i - 1];
+  fim;
+  FechamentoAnterior[0] := FechamentoAtual;
+
+  // Identificar pivôs de alta e baixa
+  Se (FechamentoAnterior[2] > FechamentoAnterior[1]) e (FechamentoAnterior[2] > FechamentoAnterior[3]) então
+    Topos[Mod(ContadorTopo, 10)] := FechamentoAnterior[2];
+    ContadorTopo := ContadorTopo + 1;
+  senão se (FechamentoAnterior[2] < FechamentoAnterior[1]) e (FechamentoAnterior[2] < FechamentoAnterior[3]) então
+    Fundos[Mod(ContadorFundo, 10)] := FechamentoAnterior[2];
+    ContadorFundo := ContadorFundo + 1;
+  fim;
+
+  // Desenhar canais de tendência
+  Se (ContadorTopo > 1) e (ContadorFundo > 1) então
+    para i := 0 até 9 faça
+      Se (Topos[i] <> 0) e (Topos[Mod(i + 1, 10)] <> 0) então
+        DrawLine(Topos[i], i, Topos[Mod(i + 1, 10)], Mod(i + 1, 10), clGreen);
+      fim;
+      Se (Fundos[i] <> 0) e (Fundos[Mod(i + 1, 10)] <> 0) então
+        DrawLine(Fundos[i], i, Fundos[Mod(i + 1, 10)], Mod(i + 1, 10), clRed);
+      fim;
+    fim;
+fim;
